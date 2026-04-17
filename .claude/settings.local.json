@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/eesa/OneDrive/Desktop/car-video-portal/frontend/src/components//**)"
+    ]
+  }
+}

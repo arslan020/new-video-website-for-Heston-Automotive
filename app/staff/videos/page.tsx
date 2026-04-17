@@ -1,0 +1,968 @@
+'use client';
+
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import DashboardLayout from '@/components/DashboardLayout';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import { useToast } from '@/components/ToastProvider';
+import { useSearchParams } from 'next/navigation';
+import {
+  FaSearch, FaVideo, FaCopy, FaTrash, FaEye, FaCalendar,
+  FaUser, FaPlay, FaTimes, FaExternalLinkAlt, FaPaperPlane, FaLink
+} from 'react-icons/fa';
+import UKPhoneInput from '@/components/UKPhoneInput';
+
+interface Video {
+  _id: string;
+  title: string;
+  originalName?: string;
+  registration?: string;
+  make?: string;
+  model?: string;
+  thumbnailUrl?: string;
+  videoUrl: string;
+  videoSource: string;
+  cloudflareVideoId?: string;
+  youtubeVideoId?: string;
+  viewCount: number;
+  views: any[];
+  createdAt: string;
+  uploadedBy?: { name?: string; username: string };
+  durationParams?: { duration?: number };
+}
+
+interface StockItem {
+  vehicle?: { registration?: string };
+  registration?: string;
+}
+
+const ITEMS_PER_PAGE = 10;
+
+export default function MyVideosPage() {
+  return (
+    <ProtectedRoute role="staff">
+      <DashboardLayout>
+        <Suspense fallback={<div className="p-8 pb-12 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" /></div>}>
+            <MyVideosContent />
+        </Suspense>
+      </DashboardLayout>
+    </ProtectedRoute>
+  );
+}
+
+function MyVideosContent() {
+  const { user } = useAuth();
+  const { showToast } = useToast();
+  const searchParams = useSearchParams();
+
+  const [videos, setVideos] = useState<Video[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [stockRegs, setStockRegs] = useState<Set<string>>(new Set());
+  const [vehicleMetadata, setVehicleMetadata] = useState<Record<string, any>>({});
+
+  // UI States
+  const [searchTerm, setSearchTerm] = useState('');
+  const [stockFilter, setStockFilter] = useState<'instock' | 'sold'>('instock');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
+
+  // Modals
+  const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
+  const [sendModalOpen, setSendModalOpen] = useState(false);
+  const [videoForSend, setVideoForSend] = useState<Video | null>(null);
+  const [sendForm, setSendForm] = useState({ title: 'Mr', name: '', email: '', mobile: '' });
+  const [sending, setSending] = useState(false);
+
+  const [reserveLinkModalOpen, setReserveLinkModalOpen] = useState(false);
+  const [reserveLinkVideo, setReserveLinkVideo] = useState<Video | null>(null);
+  const [reserveLink, setReserveLink] = useState('');
+  const [savingReserveLink, setSavingReserveLink] = useState(false);
+
+  const isAdmin = user?.role === 'admin';
+
+  const fetchVideos = useCallback(async () => {
+    if (!user?.token) return;
+    setLoading(true);
+    try {
+      const url = isAdmin ? '/api/videos?all=true' : '/api/videos';
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${user.token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        setVideos(data.videos || data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user, isAdmin]);
+
+  const fetchStock = useCallback(async () => {
+    if (!user?.token) return;
+    try {
+      const res = await fetch('/api/autotrader/stock', { headers: { Authorization: `Bearer ${user.token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        const items = Array.isArray(data) ? data : data.stock || data.results || [];
+        const regs = new Set(
+          items.map((item: StockItem) => {
+            const reg = item.vehicle?.registration || item.registration || '';
+            return reg.replace(/\s/g, '').toUpperCase();
+          }).filter(Boolean) as string[]
+        );
+        setStockRegs(regs);
+      }
+    } catch (error) {
+      console.error('Failed to fetch stock', error);
+    }
+  }, [user]);
+
+  const fetchAllVehicleMetadata = useCallback(async () => {
+    try {
+      const res = await fetch('/api/vehicle-metadata');
+      if (res.ok) {
+        const data = await res.json();
+        const map: Record<string, any> = {};
+        if (Array.isArray(data)) {
+            data.forEach(item => {
+                if (item.registration) {
+                    map[item.registration.replace(/\s/g, '').toUpperCase()] = item;
+                }
+            });
+        }
+        setVehicleMetadata(map);
+      }
+    } catch (error) {
+      console.error('Failed to fetch vehicle metadata', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchVideos();
+    fetchAllVehicleMetadata();
+    fetchStock();
+  }, [fetchVideos, fetchAllVehicleMetadata, fetchStock]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  // Handle URL "Jump To Video"
+  useEffect(() => {
+    const videoId = searchParams.get('videoId');
+    if (!videoId || loading || videos.length === 0) return;
+
+    const allFiltered = videos.filter(video => {
+      const normReg = (video.registration || '').replace(/\s/g, '').toUpperCase();
+      const isSoldVideo = normReg && stockRegs.size > 0 && !stockRegs.has(normReg);
+      return stockFilter === 'sold' ? isSoldVideo : !isSoldVideo;
+    });
+
+    const idx = allFiltered.findIndex(v => v._id === videoId);
+    if (idx === -1) {
+      const soldIdx = videos.findIndex(v => v._id === videoId);
+      if (soldIdx !== -1) {
+        const normReg = (videos[soldIdx].registration || '').replace(/\s/g, '').toUpperCase();
+        const isSold = normReg && stockRegs.size > 0 && !stockRegs.has(normReg);
+        setStockFilter(isSold ? 'sold' : 'instock');
+      }
+      return;
+    }
+
+    const page = Math.floor(idx / ITEMS_PER_PAGE) + 1;
+    setCurrentPage(page);
+    setHighlightedId(videoId);
+
+    setTimeout(() => {
+        const ref = rowRefs.current[videoId];
+        if (ref) {
+           ref.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        setTimeout(() => setHighlightedId(null), 2500);
+    }, 150);
+  }, [searchParams, videos, loading, stockRegs, stockFilter]);
+
+  const copyLink = async (video: Video) => {
+    let shareId = '';
+    try {
+      const res = await fetch(`/api/videos/${video._id}/share`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${user?.token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        shareId = data.shareId;
+      }
+    } catch (error) {
+      console.error('Failed to register share link:', error);
+    }
+
+    const baseUrl = window.location.origin;
+    let link = `${baseUrl}/view/${video._id}`;
+    if (shareId) link += `?s=${shareId}`;
+
+    try {
+      await navigator.clipboard.writeText(link);
+      showToast('Link copied to clipboard!', 'success');
+    } catch {
+      showToast('Failed to copy. URL: ' + link, 'error');
+    }
+  };
+
+  const handleDelete = async (video: Video) => {
+    if (!window.confirm(`Are you sure you want to delete "${video.title}"?`)) return;
+    try {
+      const res = await fetch(`/api/videos/${video._id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${user?.token}` }
+      });
+      if (!res.ok) throw new Error('Failed to delete video');
+      setVideos(prev => prev.filter(v => v._id !== video._id));
+      showToast('Video deleted successfully', 'success');
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    }
+  };
+
+  const handleCloseSendModal = () => {
+    setSendModalOpen(false);
+    setVideoForSend(null);
+    setSendForm({ title: 'Mr', name: '', email: '', mobile: '' });
+  };
+
+  const openSendModal = (video: Video) => {
+    setVideoForSend(video);
+    setSendForm({ title: 'Mr', name: '', email: '', mobile: '' });
+    setSendModalOpen(true);
+  };
+
+  const handleSendLink = async () => {
+    if (!videoForSend) return;
+    if (!sendForm.name.trim() || (!sendForm.email && !sendForm.mobile)) {
+      showToast('Please enter customer name and email or mobile', 'error');
+      return;
+    }
+
+    setSending(true);
+    try {
+      const refName =
+        user?.name ||
+        user?.username ||
+        videoForSend.uploadedBy?.name ||
+        videoForSend.uploadedBy?.username ||
+        '';
+      const videoLink = `${window.location.origin}/view/${videoForSend._id}?ref=${encodeURIComponent(refName)}`;
+      const payload: Record<string, unknown> = {
+        videoLink,
+        customerName: sendForm.name,
+        customerTitle: sendForm.title,
+        vehicleDetails: videoForSend.make
+          ? { make: videoForSend.make, model: videoForSend.model, registration: videoForSend.registration }
+          : undefined,
+      };
+      if (sendForm.email) payload.email = sendForm.email;
+      if (sendForm.mobile) payload.mobile = sendForm.mobile.replace(/\D/g, '');
+
+      const res = await fetch('/api/send-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user?.token}` },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((data as { error?: string }).error || 'Failed to send link');
+
+      showToast('Video link sent successfully!', 'success');
+      handleCloseSendModal();
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'Failed to send video', 'error');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const openReserveLinkModal = async (video: Video) => {
+    const normReg = (video.registration || '').replace(/\s/g, '').toUpperCase();
+    if (!normReg) {
+      showToast('Video has no registration.', 'error');
+      return;
+    }
+    
+    let reserveUrl = '';
+    if (vehicleMetadata[normReg]) {
+      reserveUrl = vehicleMetadata[normReg].reserveLink;
+    } else {
+      try {
+        const res = await fetch(`/api/vehicle-metadata/${normReg}`, {
+          headers: { Authorization: `Bearer ${user?.token}` } 
+        });
+        if (res.ok) {
+          const data = await res.json();
+          reserveUrl = data.reserveLink || '';
+          setVehicleMetadata(prev => ({ ...prev, [normReg]: data }));
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    
+    setReserveLinkVideo(video);
+    setReserveLink(reserveUrl);
+    setReserveLinkModalOpen(true);
+  };
+
+  const handleSaveReserveLink = async () => {
+    if (!reserveLinkVideo) return;
+    const normReg = (reserveLinkVideo.registration || '').replace(/\s/g, '').toUpperCase();
+    setSavingReserveLink(true);
+    try {
+      const res = await fetch(`/api/vehicle-metadata/${normReg}/reserve-link`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user?.token}` },
+        body: JSON.stringify({ reserveLink })
+      });
+      if (!res.ok) throw new Error('Failed to save reserve link');
+      showToast('Reserve link saved!', 'success');
+      setVehicleMetadata(prev => ({ ...prev, [normReg]: { ...prev[normReg], reserveLink } }));
+      setReserveLinkModalOpen(false);
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    } finally {
+      setSavingReserveLink(false);
+    }
+  };
+
+  const filteredVideos = videos.filter((video) => {
+    const searchStr = searchTerm.toLowerCase();
+    const title = (video.title || '').toLowerCase();
+    const reg = (video.registration || '').toLowerCase();
+    const make = (video.make || '').toLowerCase();
+    const model = (video.model || '').toLowerCase();
+    const matchesSearch =
+      title.includes(searchStr) ||
+      reg.includes(searchStr) ||
+      make.includes(searchStr) ||
+      model.includes(searchStr);
+
+    const normReg = (video.registration || '').replace(/\s/g, '').toUpperCase();
+    const isSoldVideo = normReg && stockRegs.size > 0 && !stockRegs.has(normReg);
+    const matchesFilter =
+      (stockFilter === 'sold' && isSoldVideo) ||
+      (stockFilter === 'instock' && !isSoldVideo);
+
+    return matchesSearch && matchesFilter;
+  });
+
+  const totalPages = Math.ceil(filteredVideos.length / ITEMS_PER_PAGE);
+  const paginatedVideos = filteredVideos.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+  const getThumbnail = (video: Video) => {
+    if (video.thumbnailUrl) return video.thumbnailUrl;
+    if (video.videoSource === 'cloudflare' && video.cloudflareVideoId) {
+        return `https://customer-wovnjl9x8m659779.cloudflarestream.com/${video.cloudflareVideoId}/thumbnails/thumbnail.jpg?time=0s&height=300`;
+    }
+    return '';
+  };
+
+  const instockTabCount = videos.filter((v) => {
+    const r = (v.registration || '').replace(/\s/g, '').toUpperCase();
+    return !r || stockRegs.size === 0 || stockRegs.has(r);
+  }).length;
+  const soldTabCount = videos.filter((v) => {
+    const r = (v.registration || '').replace(/\s/g, '').toUpperCase();
+    return !!(r && stockRegs.size > 0 && !stockRegs.has(r));
+  }).length;
+
+  const thumbSrc = (video: Video) => {
+    if (video.thumbnailUrl) return video.thumbnailUrl;
+    if (video.videoSource === 'cloudflare' && video.cloudflareVideoId) {
+      return `https://videodelivery.net/${video.cloudflareVideoId}/thumbnails/thumbnail.jpg?time=1s&height=120`;
+    }
+    if (video.youtubeVideoId) {
+      return `https://img.youtube.com/vi/${video.youtubeVideoId}/mqdefault.jpg`;
+    }
+    return getThumbnail(video);
+  };
+
+  return (
+    <div className="w-full px-6">
+      <header className="mb-6 md:mb-8 border-b pb-4 border-gray-200">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-800">My Uploaded Videos</h1>
+            <p className="text-sm md:text-base text-gray-500 mt-1">Manage and share your car videos.</p>
+          </div>
+          <div className="flex items-center gap-6">
+            <div className="relative hidden sm:block w-64">
+              <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+              <input
+                type="text"
+                placeholder="Search videos..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              />
+            </div>
+            <div className="bg-blue-100 px-4 py-2 rounded-lg">
+              <p className="text-sm text-gray-600">Total Videos</p>
+              <p className="text-2xl font-bold text-blue-600">{videos.length}</p>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div className="sm:hidden mb-6">
+        <div className="relative">
+          <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+          <input
+            type="text"
+            placeholder="Search videos..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-20">
+          <div className="spinner" />
+        </div>
+      ) : videos.length === 0 ? (
+        <div className="bg-white rounded-xl shadow-lg p-16 text-center">
+          <div className="w-24 h-24 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-6">
+            <FaVideo className="text-gray-400" size={48} />
+          </div>
+          <h3 className="text-xl font-bold text-gray-800 mb-2">No videos uploaded yet</h3>
+          <p className="text-gray-500 mb-6">Upload your first car video to get started!</p>
+          <a
+            href="/staff/upload"
+            className="inline-flex items-center justify-center bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition shadow-sm"
+          >
+            Upload Video
+          </a>
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="flex items-center gap-1 px-4 pt-4 pb-3 border-b border-gray-100">
+            {[
+              { label: 'With Videos', value: 'instock' as const, count: instockTabCount },
+              { label: 'Sold', value: 'sold' as const, count: soldTabCount },
+            ].map((tab) => (
+              <button
+                key={tab.value}
+                type="button"
+                onClick={() => { setStockFilter(tab.value); setCurrentPage(1); }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                  stockFilter === tab.value
+                    ? tab.value === 'sold'
+                      ? 'bg-red-50 text-red-600 border border-red-200'
+                      : 'bg-blue-50 text-blue-600 border border-blue-200'
+                    : 'text-gray-500 hover:bg-gray-50 border border-transparent'
+                }`}
+              >
+                {tab.label}
+                <span
+                  className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${
+                    stockFilter === tab.value
+                      ? tab.value === 'sold'
+                        ? 'bg-red-100 text-red-600'
+                        : 'bg-blue-100 text-blue-600'
+                      : 'bg-gray-100 text-gray-500'
+                  }`}
+                >
+                  {tab.count}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider w-8">#</th>
+                  <th className="px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Video</th>
+                  <th className="px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Views</th>
+                  <th className="px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Reserve Link</th>
+                  <th className="px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedVideos.length > 0 ? (
+                  paginatedVideos.map((video, index) => {
+                    const normReg = (video.registration || '').replace(/\s/g, '').toUpperCase();
+                    const hasReserveLink = !!vehicleMetadata[normReg]?.reserveLink;
+                    const globalIndex = (currentPage - 1) * ITEMS_PER_PAGE + index + 1;
+                    const isSold = !!(normReg && stockRegs.size > 0 && !stockRegs.has(normReg));
+                    let displayName = video.title || video.originalName || 'Untitled Video';
+                    if (video.registration) {
+                      const regPattern = new RegExp(`\\s*-\\s*${video.registration}`, 'i');
+                      displayName = displayName.replace(regPattern, '');
+                    }
+                    return (
+                      <tr
+                        key={video._id}
+                        ref={(el) => { rowRefs.current[video._id] = el; }}
+                        className={`group border-b border-gray-100 transition-colors ${
+                          highlightedId === video._id
+                            ? 'bg-blue-50 ring-2 ring-inset ring-blue-400'
+                            : 'bg-white hover:bg-gray-50/80'
+                        }`}
+                      >
+                        <td className="px-5 py-3.5 text-xs text-gray-300 font-medium">{globalIndex}</td>
+                        <td className="px-5 py-3.5">
+                          <div className="flex items-center gap-3">
+                            <button
+                              type="button"
+                              className="w-20 h-14 bg-gray-900 rounded-xl overflow-hidden flex-shrink-0 border border-gray-200 cursor-pointer group/thumb relative flex items-center justify-center shadow-sm"
+                              onClick={() => setSelectedVideo(video)}
+                            >
+                              {thumbSrc(video) ? (
+                                <img
+                                  src={thumbSrc(video)}
+                                  alt=""
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).onerror = null;
+                                    (e.target as HTMLImageElement).src =
+                                      'https://via.placeholder.com/160x90?text=Video';
+                                  }}
+                                />
+                              ) : (
+                                <FaVideo className="text-gray-600" size={20} />
+                              )}
+                              <div className="absolute inset-0 bg-black/0 group-hover/thumb:bg-black/40 transition-all flex items-center justify-center">
+                                <div className="w-7 h-7 rounded-full bg-white/90 flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity shadow">
+                                  <FaPlay className="text-gray-800 ml-0.5" size={10} />
+                                </div>
+                              </div>
+                            </button>
+                            <div className="min-w-0">
+                              <h3 className="font-semibold text-gray-900 text-sm truncate max-w-[220px] leading-tight">{displayName}</h3>
+                              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                {video.registration && (
+                                  <span className="px-2 py-0.5 bg-blue-50 text-blue-600 font-mono text-xs rounded-md border border-blue-100">
+                                    {video.registration}
+                                  </span>
+                                )}
+                                {isSold && (
+                                  <span className="px-2 py-0.5 bg-red-50 text-red-600 text-xs font-semibold rounded-md border border-red-200">
+                                    Sold
+                                  </span>
+                                )}
+                                <span className="flex items-center gap-1 text-xs text-gray-400">
+                                  <FaCalendar size={9} />
+                                  {new Date(video.createdAt).toLocaleDateString('en-GB', {
+                                    day: 'numeric',
+                                    month: 'short',
+                                    year: 'numeric',
+                                  })}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-semibold border border-blue-100">
+                            <FaEye size={10} />
+                            {video.viewCount || 0}
+                          </div>
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <button
+                            type="button"
+                            onClick={() => openReserveLinkModal(video)}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                              hasReserveLink
+                                ? 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm'
+                                : 'bg-white text-gray-500 border border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                            }`}
+                          >
+                            <FaLink size={10} />
+                            {hasReserveLink ? 'Edit Link' : 'Add Link'}
+                          </button>
+                        </td>
+                        <td className="px-5 py-3.5 text-right">
+                          <div className="inline-flex items-center gap-0.5 bg-gray-100 rounded-lg p-0.5 opacity-60 group-hover:opacity-100 transition-opacity">
+                            <button
+                              type="button"
+                              onClick={() => openSendModal(video)}
+                              className="p-1.5 text-blue-600 hover:bg-white rounded-md transition-colors"
+                              title="Send to Customer"
+                            >
+                              <FaPaperPlane size={13} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => copyLink(video)}
+                              className="p-1.5 text-blue-600 hover:bg-white rounded-md transition-colors"
+                              title="Copy Link"
+                            >
+                              <FaCopy size={13} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => window.open(`${window.location.origin}/view/${video._id}`, '_blank')}
+                              className="p-1.5 text-emerald-600 hover:bg-white rounded-md transition-colors"
+                              title="Open Video"
+                            >
+                              <FaExternalLinkAlt size={13} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(video)}
+                              className="p-1.5 text-red-500 hover:bg-white rounded-md transition-colors"
+                              title="Delete Video"
+                            >
+                              <FaTrash size={13} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500 font-medium">
+                      No videos found matching &quot;{searchTerm}&quot;
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50">
+              <p className="text-sm text-gray-500">
+                Showing{' '}
+                <span className="font-semibold text-gray-700">
+                  {(currentPage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, filteredVideos.length)}
+                </span>{' '}
+                of <span className="font-semibold text-gray-700">{filteredVideos.length}</span> videos
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                >
+                  ← Previous
+                </button>
+                <span className="text-sm text-gray-500 font-medium px-2">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                >
+                  Next →
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {sendModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in">
+            <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+              <h3 className="text-xl font-bold text-gray-800">Send Video Link</h3>
+              <button type="button" onClick={handleCloseSendModal} className="text-gray-400 hover:text-gray-600 transition">
+                ×
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-4 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                  <select
+                    value={sendForm.title}
+                    onChange={(e) => setSendForm((p) => ({ ...p, title: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="Mr">Mr</option>
+                    <option value="Mrs">Mrs</option>
+                    <option value="Miss">Miss</option>
+                    <option value="Ms">Ms</option>
+                    <option value="Dr">Dr</option>
+                  </select>
+                </div>
+                <div className="col-span-3">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
+                  <input
+                    type="text"
+                    value={sendForm.name}
+                    onChange={(e) => setSendForm((p) => ({ ...p, name: e.target.value }))}
+                    placeholder="John Smith"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                <input
+                  type="email"
+                  value={sendForm.email}
+                  onChange={(e) => setSendForm((p) => ({ ...p, email: e.target.value }))}
+                  placeholder="customer@example.com"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Mobile Number</label>
+                <UKPhoneInput value={sendForm.mobile} onChange={(v) => setSendForm((p) => ({ ...p, mobile: v }))} />
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={handleCloseSendModal}
+                  className="flex-1 px-4 py-2 border border-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSendLink}
+                  disabled={sending || (!sendForm.email && !sendForm.mobile)}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition shadow-sm disabled:opacity-50"
+                >
+                  {sending ? 'Sending...' : 'Send Link'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedVideo && (
+        <div
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+          onClick={() => setSelectedVideo(null)}
+        >
+          <div
+            className="bg-white rounded-2xl max-w-4xl w-full overflow-hidden shadow-2xl animate-fade-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="bg-gradient-to-r from-gray-900 to-gray-800 p-4 flex items-center justify-between text-white">
+              <div>
+                <h3 className="font-bold text-lg line-clamp-1">
+                  {selectedVideo.title || selectedVideo.originalName || 'Video Preview'}
+                </h3>
+                <p className="text-xs text-gray-400">{selectedVideo.registration || 'No Registration'}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedVideo(null)}
+                className="p-2 hover:bg-white/10 rounded-full transition-colors"
+              >
+                <FaTimes size={20} />
+              </button>
+            </div>
+            <div className="bg-black aspect-video flex items-center justify-center">
+              {selectedVideo.videoSource === 'cloudflare' && selectedVideo.cloudflareVideoId ? (
+                <iframe
+                  src={`https://customer-wovnjl9x8m659779.cloudflarestream.com/${selectedVideo.cloudflareVideoId}/iframe?poster=${encodeURIComponent(
+                    `https://customer-wovnjl9x8m659779.cloudflarestream.com/${selectedVideo.cloudflareVideoId}/thumbnails/thumbnail.jpg?time=0s&height=600`
+                  )}`}
+                  className="w-full h-full border-0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  title={selectedVideo.title}
+                />
+              ) : selectedVideo.videoSource === 'youtube' || selectedVideo.youtubeVideoId ? (
+                <iframe
+                  src={selectedVideo.videoUrl}
+                  className="w-full h-full border-0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  title={selectedVideo.title}
+                />
+              ) : (
+                <video src={selectedVideo.videoUrl} controls autoPlay className="w-full max-h-[70vh]" />
+              )}
+            </div>
+            <div className="p-5 bg-white border-t border-gray-100">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-6 text-sm text-gray-500">
+                  <div className="flex items-center gap-2">
+                    <FaEye className="text-blue-500" />
+                    <span className="font-semibold text-gray-700">{selectedVideo.viewCount || 0}</span> views
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <FaCalendar className="text-purple-500" />
+                    <span>
+                      {new Date(selectedVideo.createdAt).toLocaleDateString('en-GB', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVideoForSend(selectedVideo);
+                      setSendModalOpen(true);
+                      setSelectedVideo(null);
+                    }}
+                    className="flex-1 sm:flex-initial bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors font-medium flex items-center justify-center gap-2"
+                  >
+                    <FaPaperPlane size={14} /> Send Link
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void copyLink(selectedVideo);
+                      setSelectedVideo(null);
+                    }}
+                    className="flex-1 sm:flex-initial bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center justify-center gap-2"
+                  >
+                    <FaCopy size={14} /> Copy Link
+                  </button>
+                </div>
+              </div>
+              {selectedVideo.views && selectedVideo.views.length > 0 && (
+                <div className="mt-5 border-t border-gray-100 pt-4">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                    <FaEye className="text-blue-500" size={13} />
+                    Who Viewed This Link
+                  </h4>
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    {[...selectedVideo.views].reverse().map((view: Record<string, unknown>, idx: number) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-2.5 text-sm border border-gray-100"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                            <FaUser size={12} className="text-blue-500" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-gray-800">
+                              {(view.viewerName as string) || (view.customerName as string) || 'Unknown Customer'}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {(view.viewerEmail as string) ||
+                                (view.viewerMobile as string) ||
+                                (view.customerEmail as string) ||
+                                'No contact info'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right text-xs text-gray-400 flex-shrink-0 ml-4">
+                          <p>
+                            {view.viewedAt
+                              ? new Date(view.viewedAt as string).toLocaleDateString('en-GB', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  year: 'numeric',
+                                })
+                              : ''}
+                          </p>
+                          <p>
+                            {view.viewedAt
+                              ? new Date(view.viewedAt as string).toLocaleTimeString('en-GB', {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })
+                              : ''}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {reserveLinkModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in">
+            <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-emerald-50">
+              <h3 className="text-xl font-bold text-gray-800">
+                🔒{' '}
+                {vehicleMetadata[(reserveLinkVideo?.registration || '').replace(/\s/g, '').toUpperCase()]?.reserveLink
+                  ? 'Edit'
+                  : 'Add'}{' '}
+                Reserve Car Link
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setReserveLinkModalOpen(false);
+                  setReserveLinkVideo(null);
+                  setReserveLink('');
+                }}
+                className="text-gray-400 hover:text-gray-600 transition"
+              >
+                <FaTimes size={18} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Video</label>
+                <p className="text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded border border-gray-200">
+                  {reserveLinkVideo?.title || 'Untitled'}
+                  {reserveLinkVideo?.registration && (
+                    <span className="ml-2 text-xs font-mono text-blue-600">({reserveLinkVideo.registration})</span>
+                  )}
+                </p>
+              </div>
+              {!reserveLinkVideo?.registration && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                  <p className="text-xs text-amber-700">
+                    ⚠️ This video has no registration number — reserve link requires one.
+                  </p>
+                </div>
+              )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Reserve Car Link URL</label>
+                <input
+                  type="url"
+                  value={reserveLink}
+                  onChange={(e) => setReserveLink(e.target.value)}
+                  placeholder="https://example.com/reserve"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                />
+                <p className="text-xs text-gray-500 mt-1">Customers will be redirected here when they click &quot;Reserve Car&quot;.</p>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReserveLinkModalOpen(false);
+                    setReserveLinkVideo(null);
+                    setReserveLink('');
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveReserveLink}
+                  disabled={savingReserveLink || !reserveLinkVideo?.registration}
+                  className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition shadow-lg shadow-emerald-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {savingReserveLink ? 'Saving...' : 'Save Link'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
