@@ -348,32 +348,24 @@ function AdminStockContent() {
   };
 
   return (
-    <div className="w-full px-6 pb-12">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+    <div className="w-full px-3 sm:px-6 pb-12">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-5 sm:mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">Stock Status</h1>
-          <p className="text-gray-500 mt-1">Manage your vehicle inventory and video status.</p>
-          {lastSync && <p className="text-xs text-gray-400 mt-1">Last sync: {new Date(lastSync).toLocaleString()}</p>}
+          <h1 className="text-xl sm:text-3xl font-bold text-gray-800">Stock Status</h1>
+          <p className="text-sm text-gray-500 mt-1">Manage your vehicle inventory and video status.</p>
+          {lastSync && <p className="text-xs text-gray-400 mt-0.5">Last sync: {new Date(lastSync).toLocaleString()}</p>}
         </div>
-        <button
-          type="button"
-          onClick={handleSync}
-          disabled={syncing}
-          className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition self-start md:self-auto"
-        >
-          {syncing ? <span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full" /> : '🔄 Sync'}
-        </button>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-        <div className="p-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex bg-gray-100 p-1 rounded-lg self-start sm:self-auto">
+        <div className="p-3 sm:p-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+          <div className="flex bg-gray-100 p-1 rounded-lg self-start">
             {['All', 'With Video', 'No Video'].map((status) => (
               <button
                 key={status}
                 type="button"
                 onClick={() => { setFilterStatus(status); setCurrentPage(1); }}
-                className={`px-4 py-1.5 rounded-md text-sm font-medium transition ${filterStatus === status ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                className={`px-3 sm:px-4 py-1.5 rounded-md text-xs sm:text-sm font-medium transition ${filterStatus === status ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
               >
                 {status}
               </button>
@@ -400,11 +392,11 @@ function AdminStockContent() {
             <table className="w-full text-left border-collapse">
               <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-semibold sticky top-0 z-10">
                 <tr>
-                  <th className="px-6 py-4 bg-gray-50">Vehicle</th>
-                  <th className="px-6 py-4 bg-gray-50">Details</th>
-                  <th className="px-6 py-4 bg-gray-50">Reserve Link</th>
-                  <th className="px-6 py-4 bg-gray-50">Status</th>
-                  <th className="px-6 py-4 text-right bg-gray-50">Actions</th>
+                  <th className="px-3 sm:px-6 py-3 sm:py-4 bg-gray-50">Vehicle</th>
+                  <th className="hidden md:table-cell px-6 py-4 bg-gray-50">Details</th>
+                  <th className="hidden lg:table-cell px-6 py-4 bg-gray-50">Reserve Link</th>
+                  <th className="hidden sm:table-cell px-4 sm:px-6 py-3 sm:py-4 bg-gray-50">Status</th>
+                  <th className="px-3 sm:px-6 py-3 sm:py-4 text-right bg-gray-50">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -422,24 +414,29 @@ function AdminStockContent() {
                         key={uniqueId}
                         className={`transition relative ${videoExists ? 'bg-emerald-50 hover:bg-emerald-100' : 'hover:bg-gray-50'}`}
                       >
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-4">
-                            <div className="w-16 h-12 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 border border-gray-200">
+                        <td className="px-3 sm:px-6 py-3 sm:py-4">
+                          <div className="flex items-center gap-2 sm:gap-4">
+                            <div className="w-12 h-9 sm:w-16 sm:h-12 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 border border-gray-200">
                               {imageUrl ? (
                                 <img src={imageUrl} alt="" className="w-full h-full object-cover" />
                               ) : (
                                 <div className="flex items-center justify-center w-full h-full text-gray-400">
-                                  <FaCar size={20} />
+                                  <FaCar size={16} />
                                 </div>
                               )}
                             </div>
-                            <div>
-                              <h3 className="font-bold text-gray-800 text-sm">{vData.make} {vData.model}</h3>
+                            <div className="min-w-0">
+                              <h3 className="font-bold text-gray-800 text-xs sm:text-sm truncate">{vData.make} {vData.model}</h3>
                               <p className="text-xs text-blue-600 font-mono font-medium">{vData.registration || '—'}</p>
+                              {/* Details inline on small screens */}
+                              <div className="md:hidden mt-1 space-y-0.5">
+                                <p className="text-xs text-gray-500 truncate">{vData.derivative || ''}</p>
+                                {vData.mileage ? <p className="text-xs text-gray-400">{vData.mileage.toLocaleString()} mi</p> : null}
+                              </div>
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="hidden md:table-cell px-6 py-4">
                           <div className="space-y-1">
                             <p className="text-sm text-gray-600">{vData.derivative || '—'}</p>
                             <div className="flex items-center gap-2 text-xs text-gray-500">
@@ -449,7 +446,7 @@ function AdminStockContent() {
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="hidden lg:table-cell px-6 py-4">
                           <button
                             type="button"
                             onClick={async () => {
@@ -475,10 +472,10 @@ function AdminStockContent() {
                             🔒 {normReg && vehicleMetadata[normReg]?.reserveLink ? 'Edit Link' : 'Add Link'}
                           </button>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="hidden sm:table-cell px-4 sm:px-6 py-3 sm:py-4">
                           {videoExists ? (
                             <div className="space-y-1">
-                              <span className="inline-flex items-center gap-2 text-sm font-medium text-emerald-600">
+                              <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-medium text-emerald-600">
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                                 {matchingVideos.length} Video{matchingVideos.length > 1 ? 's' : ''}
                               </span>
@@ -489,13 +486,13 @@ function AdminStockContent() {
                               )}
                             </div>
                           ) : (
-                            <span className="inline-flex items-center gap-2 text-sm font-medium text-gray-400">
+                            <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-medium text-gray-400">
                               <span className="w-1.5 h-1.5 rounded-full bg-gray-300" />
                               No Video
                             </span>
                           )}
                         </td>
-                        <td className="px-6 py-4 text-right">
+                        <td className="px-3 sm:px-6 py-3 sm:py-4 text-right">
                           <div className="relative inline-block">
                             {videoExists ? (
                               <>
@@ -572,7 +569,7 @@ function AdminStockContent() {
                   })
                 ) : (
                   <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan={5} className="px-4 py-10 text-center text-gray-500 text-sm">
                       No stock found matching your filters.
                     </td>
                   </tr>
@@ -582,10 +579,10 @@ function AdminStockContent() {
           </div>
         )}
 
-        <div className="p-4 border-t border-gray-100 flex items-center justify-between text-sm text-gray-500 flex-wrap gap-2">
+        <div className="p-3 sm:p-4 border-t border-gray-100 flex items-center justify-between text-xs sm:text-sm text-gray-500 flex-wrap gap-2">
           <p>
-            Showing <span className="font-medium text-gray-800">{startEntry}-{endEntry}</span> of{' '}
-            <span className="font-medium text-gray-800">{filteredStock.length}</span> entries
+            <span className="font-medium text-gray-800">{startEntry}-{endEntry}</span> of{' '}
+            <span className="font-medium text-gray-800">{filteredStock.length}</span>
           </p>
           <div className="flex gap-2">
             <button
@@ -621,8 +618,8 @@ function AdminStockContent() {
       </div>
 
       {sendModalOpen && selectedVideo && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 sm:p-4 p-0">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md overflow-hidden animate-fade-in max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
               <h3 className="text-xl font-bold text-gray-800">Send Video Link</h3>
               <button type="button" onClick={handleCloseSendModal} className="text-gray-400 hover:text-gray-600 transition">
@@ -693,8 +690,8 @@ function AdminStockContent() {
       )}
 
       {reserveLinkModalOpen && reserveLinkItem && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 sm:p-4 p-0">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md overflow-hidden animate-fade-in max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-emerald-50">
               <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                 🔒 {vehicleMetadata[(getVehicleData(reserveLinkItem).registration || '').replace(/\s/g, '').toUpperCase()]?.reserveLink ? 'Edit' : 'Add'} Reserve Car Link

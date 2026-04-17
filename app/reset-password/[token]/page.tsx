@@ -47,21 +47,21 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#f0f4f8] px-4 font-sans text-gray-700">
-      <div className="mb-6">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#f0f4f8] px-4 py-8 font-sans text-gray-700">
+      <div className="mb-5 sm:mb-6">
         <Image
           src="/business-logo.png"
           alt="Heston Automotive"
           width={200}
           height={64}
-          style={{ width: 'auto', height: '64px' }}
-          className="object-contain"
+          style={{ width: 'auto', height: '52px' }}
+          className="object-contain sm:h-16"
         />
       </div>
 
-      <div className="bg-white p-8 rounded-2xl shadow-sm w-full max-w-md border border-gray-100">
-        <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Reset Password</h2>
+      <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-sm w-full max-w-sm sm:max-w-md border border-gray-100">
+        <div className="text-center mb-6 sm:mb-8">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">Reset Password</h2>
           <p className="text-gray-500 text-sm">Create a new strong password for your account.</p>
         </div>
 

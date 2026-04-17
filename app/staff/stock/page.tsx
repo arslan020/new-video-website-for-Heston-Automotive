@@ -93,11 +93,13 @@ function StockContent() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadPhase, setUploadPhase] = useState<'server' | 'cloudflare'>('server');
+  const [uploadPhase, setUploadPhase] = useState<'cloudflare'>('cloudflare');
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const xhrRef = useRef<XMLHttpRequest | null>(null);
+  const pendingUidRef = useRef<string | null>(null);
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return 'N/A';
@@ -222,10 +224,19 @@ function StockContent() {
 
   // Upload Logic
   const resetUploadState = () => {
+      if (xhrRef.current) { xhrRef.current.abort(); xhrRef.current = null; }
+      if (pendingUidRef.current) {
+          fetch(`/api/videos/cloudflare/${pendingUidRef.current}`, {
+              method: 'DELETE',
+              headers: { Authorization: `Bearer ${user?.token}` },
+          }).catch(() => {});
+          pendingUidRef.current = null;
+      }
       setSelectedFile(null);
       setUploadSuccess(false);
       setUploadProgress(0);
-      setUploadPhase('server');
+      setUploading(false);
+      setUploadPhase('cloudflare');
       setLookupLoading(false);
       setSmartMileage('');
       setSmartReserveLink('');
@@ -252,59 +263,69 @@ function StockContent() {
       }
   };
 
-  const processUpload = async (formData: FormData) => {
-      setUploading(true); setUploadProgress(0); setUploadPhase('server');
+  const processUpload = async (meta: {
+      file: File;
+      title: string;
+      registration?: string;
+      make?: string;
+      model?: string;
+      vehicleDetails?: any;
+      mileage?: string;
+      reserveCarLink?: string;
+      originalName?: string;
+  }) => {
+      setUploading(true); setUploadProgress(0); setUploadPhase('cloudflare');
       try {
-          // Manual XMLHttpRequest for upload progress tracking
-          const xhr = new XMLHttpRequest();
-          xhr.open('POST', '/api/videos', true);
-          xhr.setRequestHeader('Authorization', `Bearer ${user?.token}`);
-          
-          const uploadPromise = new Promise((resolve, reject) => {
-             xhr.upload.onprogress = (e) => {
-                 if (e.lengthComputable) {
-                     const percent = Math.round((e.loaded * 100) / e.total);
-                     setUploadProgress(Math.round(percent / 2)); // 0-50%
-                 }
-             };
-             xhr.onload = () => {
-                 if (xhr.status >= 200 && xhr.status < 300) {
-                     resolve(JSON.parse(xhr.responseText));
-                 } else {
-                     reject(new Error(xhr.responseText));
-                 }
-             };
-             xhr.onerror = () => reject(new Error('Network error during upload'));
+          // Step 1: get a direct Cloudflare upload URL (tiny request, no file — bypasses Vercel limit)
+          const urlRes = await fetch('/api/cloudflare/direct-upload', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user?.token}` },
+              body: JSON.stringify({ title: meta.title }),
           });
-          
-          xhr.send(formData);
-          const data: any = await uploadPromise;
+          if (!urlRes.ok) throw new Error('Failed to get upload URL');
+          const { uploadURL, uid } = await urlRes.json();
+          pendingUidRef.current = uid;
 
-          if (!data.jobId) { // Fallback for old API without SSE
-              setUploadProgress(100);
-              setUploadSuccess(true);
-              fetchVideos();
-              setTimeout(() => {
-                  setSmartUploadOpen(false); setDirectUploadOpen(false); resetUploadState();
-              }, 2500);
-              return;
-          }
-
-          // Phase 2: SSE from Cloudflare
-          setUploadProgress(50);
-          setUploadPhase('cloudflare');
-
+          // Step 2: upload file directly from browser to Cloudflare via XHR form POST (bypasses Vercel)
           await new Promise<void>((resolve, reject) => {
-              const es = new EventSource(`/api/videos/progress/${data.jobId}?token=${user?.token}`);
-              es.addEventListener('progress', (e: any) => {
-                  try {
-                      const msg = JSON.parse(e.data);
-                      setUploadProgress(50 + Math.round(msg.percent / 2));
-                  } catch (err) {}
-              });
-              es.addEventListener('done', () => { es.close(); setUploadProgress(100); resolve(); });
-              es.addEventListener('error', (e: any) => { es.close(); reject(new Error('Cloudflare upload tracking failed')); });
+              const xhr = new XMLHttpRequest();
+              xhrRef.current = xhr;
+              const fd = new FormData();
+              fd.append('file', meta.file);
+              xhr.upload.onprogress = (e) => {
+                  if (e.lengthComputable) setUploadProgress(Math.round((e.loaded / e.total) * 100));
+              };
+              xhr.onload = () => {
+                  xhrRef.current = null;
+                  if (xhr.status >= 200 && xhr.status < 300) resolve();
+                  else reject(new Error(`Cloudflare upload failed (${xhr.status}): ${xhr.responseText}`));
+              };
+              xhr.onerror = () => { xhrRef.current = null; reject(new Error('Network error during upload')); };
+              xhr.onabort = () => { xhrRef.current = null; reject(new Error('Upload cancelled')); };
+              xhr.open('POST', uploadURL);
+              xhr.send(fd);
           });
+
+          setUploadProgress(100);
+          pendingUidRef.current = null;
+
+          // Step 3: save video metadata in our DB (small JSON request — no file)
+          const saveRes = await fetch('/api/videos', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user?.token}` },
+              body: JSON.stringify({
+                  cloudflareVideoId: uid,
+                  title: meta.title,
+                  registration: meta.registration,
+                  make: meta.make,
+                  model: meta.model,
+                  vehicleDetails: meta.vehicleDetails,
+                  mileage: meta.mileage,
+                  reserveCarLink: meta.reserveCarLink,
+                  originalName: meta.originalName || meta.file.name,
+              }),
+          });
+          if (!saveRes.ok) throw new Error('Failed to save video');
 
           setUploadSuccess(true);
           fetchVideos();
@@ -313,7 +334,9 @@ function StockContent() {
           }, 2500);
 
       } catch (err: any) {
-          showToast(err.message || 'Upload failed', 'error');
+          if (err.message !== 'Upload cancelled') {
+              showToast(err.message || 'Upload failed', 'error');
+          }
       } finally {
           setUploading(false);
       }
@@ -321,30 +344,64 @@ function StockContent() {
 
   const handleSmartUpload = () => {
       if (!selectedFile || !fetchedVehicle) return;
-      const fd = new FormData();
-      fd.append('video', selectedFile);
-      fd.append('title', `${fetchedVehicle.make} ${fetchedVehicle.model} - ${fetchedVehicle.registration}`);
-      fd.append('make', fetchedVehicle.make); fd.append('model', fetchedVehicle.model); fd.append('registration', fetchedVehicle.registration);
-      fd.append('vehicleDetails', JSON.stringify(fetchedVehicle));
-      fd.append('mileage', smartMileage);
-      fd.append('reserveCarLink', smartReserveLink);
-      processUpload(fd);
+      processUpload({
+          file: selectedFile,
+          title: `${fetchedVehicle.make} ${fetchedVehicle.model} - ${fetchedVehicle.registration}`,
+          make: fetchedVehicle.make,
+          model: fetchedVehicle.model,
+          registration: fetchedVehicle.registration,
+          vehicleDetails: fetchedVehicle,
+          mileage: smartMileage,
+          reserveCarLink: smartReserveLink,
+          originalName: selectedFile.name,
+      });
   };
 
   const handleDirectUpload = () => {
       if (!selectedFile || !selectedStockItem) return;
       const v = getVehicleData(selectedStockItem);
-      const fd = new FormData();
-      fd.append('video', selectedFile);
-      fd.append('title', `${v.make} ${v.model} - ${v.registration}`);
-      fd.append('make', v.make); fd.append('model', v.model); fd.append('registration', v.registration);
-      // Construct a faux vehicleDetails object
-      const vd = {
-         registration: v.registration, make: v.make, model: v.model, derivative: v.derivative, 
-         odometerReadingMiles: v.mileage, provider: 'AutoTrader', rawData: selectedStockItem
+      const sv = selectedStockItem.vehicle || selectedStockItem;
+      const vehicleDetails = {
+          registration: v.registration,
+          make: v.make,
+          model: v.model,
+          derivative: v.derivative,
+          fuelType: sv.fuelType || '',
+          transmissionType: sv.transmissionType || sv.transmission || '',
+          colour: sv.colour || '',
+          bhp: sv.enginePowerBHP || sv.bhp || '',
+          engineSize: sv.engineCapacityCC || sv.engineSize || '',
+          firstRegistrationDate: sv.firstRegistrationDate || '',
+          odometerReadingMiles: sv.odometerReadingMiles || v.mileage || 0,
+          enginePowerBHP: sv.enginePowerBHP || '',
+          accelerationSeconds: sv.accelerationSeconds || '',
+          topSpeedMPH: sv.topSpeedMPH || '',
+          fuelEconomyWLTPCombinedMPG: sv.fuelEconomyWLTPCombinedMPG || '',
+          fuelEconomyNEDCCombinedMPG: sv.fuelEconomyNEDCCombinedMPG || '',
+          co2EmissionGPKM: sv.co2EmissionGPKM || '',
+          emissionClass: sv.emissionClass || '',
+          doors: sv.doors || '',
+          seats: sv.seats || '',
+          bootSpaceSeatsUpLitres: sv.bootSpaceSeatsUpLitres || '',
+          minimumKerbWeightKG: sv.minimumKerbWeightKG || '',
+          insuranceGroup: sv.insuranceGroup || '',
+          previousOwners: sv.previousOwners || '',
+          motExpiryDate: sv.motExpiryDate || '',
+          serviceHistory: sv.serviceHistory || '',
+          highlights: selectedStockItem.highlights || [],
+          features: selectedStockItem.features || [],
+          provider: 'AutoTrader',
+          rawData: selectedStockItem,
       };
-      fd.append('vehicleDetails', JSON.stringify(vd));
-      processUpload(fd);
+      processUpload({
+          file: selectedFile,
+          title: `${v.make} ${v.model} - ${v.registration}`,
+          make: v.make,
+          model: v.model,
+          registration: v.registration,
+          vehicleDetails,
+          originalName: selectedFile.name,
+      });
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -416,6 +473,12 @@ function StockContent() {
     } catch (err: any) { showToast(err.message, 'error'); } 
     finally { setSending(false); }
   };
+
+  // Derived values for Direct Upload modal
+  const directVd = selectedStockItem ? getVehicleData(selectedStockItem) : null;
+  const directBrandLogo = directVd
+    ? `https://raw.githubusercontent.com/filippofilip95/car-logos-dataset/master/logos/optimized/${directVd.make.toLowerCase().replace(/\s+/g, '-')}.png`
+    : '';
 
   // Filter & Pagination
   const filteredStock = stock.filter(item => {
@@ -686,7 +749,7 @@ function StockContent() {
                       {uploading && (
                         <div className="space-y-2 mb-4">
                           <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">{uploadPhase === 'cloudflare' ? '☁️ Uploading to Cloudflare...' : '📤 Sending to server...'}</span>
+                            <span className="text-gray-600">☁️ Uploading directly to Cloudflare...</span>
                             <span className="text-blue-600 font-medium">{uploadProgress}%</span>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
@@ -724,95 +787,122 @@ function StockContent() {
 
       {/* Direct Upload Modal */}
       {directUploadOpen && selectedStockItem && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-5 flex justify-between items-center shrink-0">
-              <h3 className="text-lg font-bold flex items-center gap-2"><FaVideo /> Upload Video</h3>
-              <button onClick={() => { setDirectUploadOpen(false); setSelectedStockItem(null); setSelectedFile(null); setUploadError(''); resetUploadState(); }} className="text-white hover:text-gray-200 transition"><FaTimes size={24} /></button>
-            </div>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
 
-            <div className="overflow-y-auto p-6 flex-1">
-              {/* Vehicle Details Card */}
-              <div className="bg-blue-50 rounded-xl p-5 border border-blue-100 mb-6">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-800">{getVehicleData(selectedStockItem).make} {getVehicleData(selectedStockItem).model}</h2>
-                    <p className="text-gray-600">{getVehicleData(selectedStockItem).derivative}</p>
-                  </div>
-                  <span className="bg-yellow-400 text-black px-3 py-1 rounded font-bold text-lg tracking-wider border-2 border-black">
-                    {getVehicleData(selectedStockItem).registration}
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div className="flex items-center gap-2"><FaGasPump className="text-gray-400" /> {(selectedStockItem.vehicle?.fuelType || selectedStockItem.fuelType) || 'N/A'}</div>
-                  <div className="flex items-center gap-2"><FaCog className="text-gray-400" /> {(selectedStockItem.vehicle?.transmissionType || selectedStockItem.transmission) || 'N/A'}</div>
-                  <div className="flex items-center gap-2"><FaPalette className="text-gray-400" /> {(selectedStockItem.vehicle?.colour || selectedStockItem.colour) || 'N/A'}</div>
-                  <div className="flex items-center gap-2"><FaCalendar className="text-gray-400" /> {formatDate(selectedStockItem.vehicle?.firstRegistrationDate)}</div>
+            {/* Header — light */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <img src={directBrandLogo} alt={directVd!.make} className="w-10 h-10 object-contain"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                <div>
+                  <h3 className="font-bold text-gray-800 text-base leading-tight">Upload Video</h3>
+                  <p className="text-xs text-gray-400">{directVd!.make} {directVd!.model}</p>
                 </div>
               </div>
+              <button onClick={() => { setDirectUploadOpen(false); setSelectedStockItem(null); setSelectedFile(null); setUploadError(''); resetUploadState(); }}
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition">
+                <FaTimes size={14} />
+              </button>
+            </div>
 
-              {/* Upload Section */}
+            <div className="overflow-y-auto flex-1">
               {uploadSuccess ? (
-                <div className="text-center py-8">
+                <div className="text-center py-14 px-6">
                   <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <FaCheck className="text-green-600" size={32} />
+                    <FaCheck className="text-green-500" size={28} />
                   </div>
-                  <h3 className="text-xl font-bold text-gray-800">Success!</h3>
-                  <p className="text-gray-500 mb-6">Video uploaded for {getVehicleData(selectedStockItem).registration}</p>
-                  <button onClick={() => { setDirectUploadOpen(false); setSelectedStockItem(null); setSelectedFile(null); setUploadError(''); resetUploadState(); }} className="text-blue-600 font-bold hover:underline">Close</button>
+                  <h3 className="text-lg font-bold text-gray-800 mb-1">Upload Complete!</h3>
+                  <p className="text-sm text-gray-500 mb-6">{directVd!.make} {directVd!.model} — {directVd!.registration}</p>
+                  <button onClick={() => { setDirectUploadOpen(false); setSelectedStockItem(null); setSelectedFile(null); setUploadError(''); resetUploadState(); }}
+                    className="px-6 py-2 bg-gray-900 text-white rounded-lg text-sm font-semibold hover:bg-gray-700 transition">Done</button>
                 </div>
               ) : (
-                <div>
-                  <h4 className="font-bold text-gray-700 mb-3">Upload Video File</h4>
+                <div className="p-8 space-y-5">
+                  {/* Vehicle card */}
+                  <div className="rounded-xl border border-gray-100 bg-gray-50 p-5 flex items-center gap-5">
+                    <img src={directBrandLogo} alt={directVd!.make} className="w-28 h-28 object-contain flex-shrink-0"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display='none'; }} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <span className="font-bold text-gray-900 text-lg">{directVd!.make} {directVd!.model}</span>
+                        <span className="bg-yellow-400 text-black text-sm font-bold px-3 py-1 rounded border border-yellow-600 tracking-wide">{directVd!.registration}</span>
+                      </div>
+                      <p className="text-sm text-gray-500 mt-1 truncate">{directVd!.derivative}</p>
+                      <div className="flex gap-4 mt-2 flex-wrap">
+                        {(selectedStockItem.vehicle?.fuelType || selectedStockItem.fuelType) && (
+                          <span className="inline-flex items-center gap-1.5 text-sm text-gray-500"><FaGasPump size={11} className="text-gray-400" />{selectedStockItem.vehicle?.fuelType || selectedStockItem.fuelType}</span>
+                        )}
+                        {(selectedStockItem.vehicle?.transmissionType || selectedStockItem.transmission) && (
+                          <span className="inline-flex items-center gap-1.5 text-sm text-gray-500"><FaCog size={11} className="text-gray-400" />{selectedStockItem.vehicle?.transmissionType || selectedStockItem.transmission}</span>
+                        )}
+                        {(selectedStockItem.vehicle?.colour || selectedStockItem.colour) && (
+                          <span className="inline-flex items-center gap-1.5 text-sm text-gray-500"><FaPalette size={11} className="text-gray-400" />{selectedStockItem.vehicle?.colour || selectedStockItem.colour}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
 
+                  {/* Progress bar */}
                   {uploading && (
-                    <div className="space-y-2 mb-4">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">{uploadPhase === 'cloudflare' ? '☁️ Uploading to Cloudflare...' : '📤 Sending to server...'}</span>
-                        <span className="text-blue-600 font-medium">{uploadProgress}%</span>
+                    <div className="rounded-xl border border-gray-100 bg-gray-50 p-5 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse inline-block" />
+                          <span className="text-sm font-medium text-gray-700">Uploading video...</span>
+                        </div>
+                        <span className="text-sm font-bold text-gray-900">{uploadProgress}%</span>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                        <div className="bg-gradient-to-r from-blue-500 to-purple-500 h-2.5 rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+                      <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                        <div
+                          className="h-3 rounded-full transition-all duration-300"
+                          style={{ width: `${uploadProgress}%`, background: 'linear-gradient(90deg, #0ea5e9, #06b6d4)' }}
+                        />
                       </div>
-                      {uploadPhase === 'cloudflare' && <p className="text-xs text-amber-600">⚠️ Large files may take a few minutes — please keep this page open</p>}
+                      <p className="text-xs text-gray-400 text-center">Do not close this tab until the upload finishes</p>
                     </div>
                   )}
 
+                  {/* Drop zone */}
                   <div
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
+                    onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
                     onClick={() => fileInputRef.current?.click()}
-                    className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all mb-4 ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'}`}
+                    className={`rounded-xl border-2 border-dashed p-10 text-center cursor-pointer transition-all ${isDragging ? 'border-blue-400 bg-blue-50' : selectedFile ? 'border-green-300 bg-green-50' : 'border-gray-200 hover:border-gray-300 bg-gray-50 hover:bg-gray-100'}`}
                   >
                     <input ref={fileInputRef} type="file" accept="video/*" onChange={handleFileSelect} className="hidden" />
-                    <FaCloudUploadAlt className={`mx-auto mb-3 ${isDragging ? 'text-blue-500' : 'text-gray-400'}`} size={40} />
                     {selectedFile ? (
-                      <div>
-                        <p className="text-green-600 font-medium mb-1">✓ {selectedFile.name}</p>
-                        <p className="text-sm text-gray-500">{(selectedFile.size / (1024 * 1024)).toFixed(2)} MB</p>
-                        <p className="text-xs text-gray-400 mt-2">Click to change file</p>
-                      </div>
+                      <>
+                        <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                          <FaCheck className="text-green-500" size={22} />
+                        </div>
+                        <p className="font-semibold text-green-700 text-base">{selectedFile.name}</p>
+                        <p className="text-sm text-gray-500 mt-1">{(selectedFile.size / (1024 * 1024)).toFixed(1)} MB · Click to change</p>
+                      </>
                     ) : (
-                      <div>
-                        <p className="text-gray-700 font-medium mb-1">Drop video file here or click to browse</p>
-                        <p className="text-sm text-gray-500">Supports MP4, MOV, AVI and other video formats</p>
-                      </div>
+                      <>
+                        <FaCloudUploadAlt className="mx-auto mb-3 text-gray-300" size={48} />
+                        <p className="text-base font-medium text-gray-600">Drop video here or <span className="text-blue-500">browse</span></p>
+                        <p className="text-sm text-gray-400 mt-1">MP4, MOV, AVI — up to 3GB</p>
+                      </>
                     )}
                   </div>
 
-                  {uploadError && <div className="mt-3 text-red-600 text-sm font-medium text-center">{uploadError}</div>}
-
-                  <div className="mt-6 flex justify-end gap-3">
-                    <button onClick={() => { setDirectUploadOpen(false); setSelectedStockItem(null); setSelectedFile(null); setUploadError(''); resetUploadState(); }} className="px-5 py-2.5 text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
-                    <button onClick={handleDirectUpload} disabled={!selectedFile || uploading} className="bg-green-600 text-white px-6 py-2.5 rounded-lg font-bold hover:bg-green-700 transition disabled:opacity-50 flex items-center gap-2">
-                      {uploading ? 'Uploading...' : <><FaCloudUploadAlt /> Start Upload</>}
-                    </button>
-                  </div>
+                  {uploadError && <p className="text-sm text-red-500 text-center">{uploadError}</p>}
                 </div>
               )}
             </div>
+
+            {/* Footer */}
+            {!uploadSuccess && (
+              <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-2">
+                <button onClick={() => { setDirectUploadOpen(false); setSelectedStockItem(null); setSelectedFile(null); setUploadError(''); resetUploadState(); }}
+                  className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition">Cancel</button>
+                <button onClick={handleDirectUpload} disabled={!selectedFile || uploading}
+                  className="px-5 py-2 text-sm font-semibold bg-gray-900 text-white rounded-lg hover:bg-gray-700 disabled:opacity-40 transition flex items-center gap-2">
+                  {uploading ? <><span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />Uploading...</> : <><FaCloudUploadAlt size={13} /> Start Upload</>}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

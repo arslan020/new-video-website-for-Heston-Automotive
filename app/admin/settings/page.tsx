@@ -135,29 +135,29 @@ function SettingsContent() {
 
   return (
     <DashboardLayout>
-      <div className="w-full px-6 pb-12">
+      <div className="w-full px-3 sm:px-6 pb-12">
         {/* Header Section */}
-        <div className="mb-8">
-            <h1 className="text-2xl font-bold text-gray-800">Settings</h1>
+        <div className="mb-5 sm:mb-8">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Settings</h1>
         </div>
 
         {/* Message Toast */}
         {message.text && (
-            <div className={`mb-6 w-full p-4 rounded-lg flex items-center gap-3 shadow-sm ${message.type === 'success'
+            <div className={`mb-4 sm:mb-6 w-full p-3 sm:p-4 rounded-lg flex items-start sm:items-center gap-3 shadow-sm ${message.type === 'success'
                 ? 'bg-green-50 border border-green-200 text-green-700'
                 : 'bg-red-50 border border-red-200 text-red-700'
                 }`}>
-                <FaCheckCircle className={message.type === 'success' ? 'text-green-600' : 'text-red-600'} />
-                <span className="font-medium">{message.text}</span>
-                <button onClick={() => setMessage({ type: '', text: '' })} className="ml-auto opacity-70 hover:opacity-100">
+                <FaCheckCircle className={`flex-shrink-0 mt-0.5 sm:mt-0 ${message.type === 'success' ? 'text-green-600' : 'text-red-600'}`} />
+                <span className="font-medium text-sm sm:text-base flex-1">{message.text}</span>
+                <button onClick={() => setMessage({ type: '', text: '' })} className="ml-auto flex-shrink-0 opacity-70 hover:opacity-100">
                     <FaTimes />
                 </button>
             </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 w-full">
             {/* Left Sidebar (Settings Navigation / Actions) */}
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6 order-2 lg:order-1">
                 {/* Status Card */}
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
                     <h3 className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-4">Account Status</h3>
@@ -208,24 +208,24 @@ function SettingsContent() {
             </div>
 
             {/* Main Content (Profile Form) */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="lg:col-span-2 space-y-4 sm:space-y-6 order-1 lg:order-2">
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+                    <div className="p-4 sm:p-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div>
-                            <h2 className="text-xl font-bold text-gray-800">Administrator Profile</h2>
-                            <p className="text-sm text-gray-500 mt-1">Update your admin credentials.</p>
+                            <h2 className="text-lg sm:text-xl font-bold text-gray-800">Administrator Profile</h2>
+                            <p className="text-xs sm:text-sm text-gray-500 mt-1">Update your admin credentials.</p>
                         </div>
                         {!showProfileForm && (
                             <button
                                 onClick={() => setShowProfileForm(true)}
-                                className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-700 transition flex items-center gap-2"
+                                className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-700 transition flex items-center justify-center gap-2 w-full sm:w-auto"
                             >
                                 <FaEdit /> Edit
                             </button>
                         )}
                     </div>
 
-                    <div className="p-6">
+                    <div className="p-4 sm:p-6">
                         {showProfileForm ? (
                             <form onSubmit={handleProfileUpdate} className="space-y-6">
                                 <div className="grid grid-cols-1 gap-6">
@@ -345,62 +345,62 @@ function SettingsContent() {
                                     </div>
                                 </div>
 
-                                <div className="flex gap-4 pt-4">
+                                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4">
                                     <button
                                         type="submit"
                                         disabled={loading}
-                                        className="flex-1 bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition shadow-lg shadow-purple-200 disabled:opacity-50"
+                                        className="flex-1 bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition shadow-lg shadow-purple-200 disabled:opacity-50 text-sm sm:text-base"
                                     >
                                         {loading ? 'Saving Changes...' : 'Save Changes'}
                                     </button>
                                     <button
                                         type="button"
                                         onClick={handleCancelEdit}
-                                        className="px-6 py-3 bg-white border border-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition"
+                                        className="px-6 py-3 bg-white border border-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition text-sm sm:text-base"
                                     >
                                         Cancel
                                     </button>
                                 </div>
                             </form>
                         ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-y-8 gap-x-12">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-y-8 sm:gap-x-12">
                                 <div className="group">
                                     <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Username</label>
                                     <div className="flex items-center gap-3 text-gray-800">
-                                        <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
+                                        <div className="w-8 h-8 flex-shrink-0 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
                                             <FaUserShield size={14} />
                                         </div>
-                                        <span className="font-medium text-lg">{user?.username}</span>
+                                        <span className="font-medium text-base sm:text-lg break-all">{user?.username}</span>
                                     </div>
                                 </div>
 
                                 <div className="group">
                                     <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Email Address</label>
                                     <div className="flex items-center gap-3 text-gray-800">
-                                        <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-500 flex items-center justify-center">
+                                        <div className="w-8 h-8 flex-shrink-0 rounded-lg bg-indigo-50 text-indigo-500 flex items-center justify-center">
                                             <FaEnvelope size={14} />
                                         </div>
-                                        <span className="font-medium text-lg">{user?.email || 'N/A'}</span>
+                                        <span className="font-medium text-base sm:text-lg break-all">{user?.email || 'N/A'}</span>
                                     </div>
                                 </div>
 
                                 <div className="group">
                                     <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Phone Number</label>
                                     <div className="flex items-center gap-3 text-gray-800">
-                                        <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-500 flex items-center justify-center">
+                                        <div className="w-8 h-8 flex-shrink-0 rounded-lg bg-emerald-50 text-emerald-500 flex items-center justify-center">
                                             <FaPhone size={14} />
                                         </div>
-                                        <span className="font-medium text-lg">{user?.phoneNumber || 'N/A'}</span>
+                                        <span className="font-medium text-base sm:text-lg">{user?.phoneNumber || 'N/A'}</span>
                                     </div>
                                 </div>
 
                                 <div className="group">
                                     <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Security</label>
                                     <div className="flex items-center gap-3 text-gray-800">
-                                        <div className="w-8 h-8 rounded-lg bg-gray-100 text-gray-500 flex items-center justify-center">
+                                        <div className="w-8 h-8 flex-shrink-0 rounded-lg bg-gray-100 text-gray-500 flex items-center justify-center">
                                             <FaLock size={14} />
                                         </div>
-                                        <span className="font-medium text-lg">Password & Authentication</span>
+                                        <span className="font-medium text-sm sm:text-lg">Password & Authentication</span>
                                     </div>
                                 </div>
                             </div>

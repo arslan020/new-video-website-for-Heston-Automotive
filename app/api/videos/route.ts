@@ -62,12 +62,40 @@ export async function POST(req: NextRequest) {
 
   const contentType = req.headers.get('content-type') || '';
 
-  // YouTube URL upload
+  // JSON body: YouTube URL or direct Cloudflare upload (post-upload metadata save)
   if (contentType.includes('application/json')) {
     try {
       await connectDB();
       const body = await req.json();
-      const { youtubeUrl } = body;
+      const { youtubeUrl, cloudflareVideoId } = body;
+
+      // Direct Cloudflare upload — save metadata after browser uploaded directly to Cloudflare
+      if (cloudflareVideoId) {
+        const subdomain = process.env.CLOUDFLARE_CUSTOMER_SUBDOMAIN;
+        const video = await Video.create({
+          uploadedBy: user._id,
+          videoUrl: `https://${subdomain}/${cloudflareVideoId}/iframe`,
+          videoSource: 'cloudflare',
+          cloudflareVideoId,
+          originalName: body.originalName || undefined,
+          title: body.title || cloudflareVideoId,
+          registration: body.registration || undefined,
+          make: body.make || undefined,
+          model: body.model || undefined,
+          vehicleDetails: body.vehicleDetails || undefined,
+          mileage: body.mileage ? Number(body.mileage) : undefined,
+          reserveCarLink: body.reserveCarLink || undefined,
+          thumbnailUrl: `https://${subdomain}/${cloudflareVideoId}/thumbnails/thumbnail.jpg`,
+        });
+        await AuditLog.create({
+          action: 'UPLOAD_VIDEO',
+          user: user._id,
+          details: `Uploaded video: ${video.title} (${video.registration || 'No Reg'})`,
+          targetId: video._id?.toString(),
+          metadata: { registration: video.registration },
+        });
+        return Response.json(video, { status: 201 });
+      }
 
       if (!youtubeUrl) {
         return Response.json({ message: 'No video file or YouTube URL provided' }, { status: 400 });

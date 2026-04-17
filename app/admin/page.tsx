@@ -71,7 +71,7 @@ const AdminDashboard = () => {
 
             const chartRes = await fetch('/api/audit-logs/weekly-stats', { headers });
             const chartResData = await chartRes.json();
-            setChartData(chartResData);
+            setChartData(Array.isArray(chartResData) ? chartResData : chartResData.data || []);
         } catch (error) {
             console.error('Failed to fetch dashboard stats', error);
         } finally {
@@ -135,21 +135,21 @@ const AdminDashboard = () => {
 
     return (
         <DashboardLayout>
-            <div className="w-full px-6 space-y-8 animate-fadeIn">
+            <div className="w-full px-3 sm:px-6 space-y-5 sm:space-y-8 animate-fadeIn">
 
                 {/* Weekly Activity Section */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                    <div className="flex justify-between items-center mb-6">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
+                    <div className="flex justify-between items-center mb-4 sm:mb-6">
                         <div>
-                            <h2 className="text-lg font-bold text-gray-800">Weekly Activity</h2>
+                            <h2 className="text-base sm:text-lg font-bold text-gray-800">Weekly Activity</h2>
                             <p className="text-xs text-gray-400 mt-0.5">Last 7 days of system actions</p>
                         </div>
-                        <span className="text-xs font-medium text-gray-400 bg-gray-50 px-3 py-1 rounded-full border border-gray-100">
-                            {totalActivity} total actions
+                        <span className="text-xs font-medium text-gray-400 bg-gray-50 px-2 sm:px-3 py-1 rounded-full border border-gray-100">
+                            {totalActivity} total
                         </span>
                     </div>
 
-                    <div className="h-64 w-full">
+                    <div className="w-full" style={{ height: 220 }}>
                         {chartLoading ? (
                             <div className="flex items-center justify-center h-full">
                                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
@@ -162,7 +162,7 @@ const AdminDashboard = () => {
                                 <p className="text-sm">No activity in the last 7 days</p>
                             </div>
                         ) : (
-                            <ResponsiveContainer width="100%" height="100%">
+                            <ResponsiveContainer width="100%" height={220}>
                                 <AreaChart
                                     data={chartData}
                                     margin={{ top: 5, right: 10, left: -20, bottom: 0 }}
@@ -238,21 +238,21 @@ const AdminDashboard = () => {
 
                 {/* Go To Section */}
                 <div>
-                    <h3 className="text-lg font-bold text-gray-800 mb-4">Go To</h3>
+                    <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-3 sm:mb-4">Go To</h3>
 
                     {loading ? (
-                        <div className="flex justify-center py-12">
+                        <div className="flex justify-center py-10 sm:py-12">
                             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
                             {statCards.map((card, idx) => {
                                 const Icon = card.icon;
                                 return (
                                     <div
                                         key={idx}
                                         onClick={() => router.push(card.path)}
-                                        className="group bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col justify-between h-48"
+                                        className="group bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col justify-between h-40 sm:h-48"
                                     >
                                         <div className="flex justify-between items-start">
                                             <div className={`${card.bgClass} p-3 rounded-lg`}>
@@ -264,11 +264,11 @@ const AdminDashboard = () => {
                                         </div>
 
                                         <div>
-                                            <h4 className="font-bold text-gray-800 text-lg">{card.title}</h4>
-                                            <p className="text-sm text-gray-400 mt-1 mb-3">{card.desc}</p>
+                                            <h4 className="font-bold text-gray-800 text-base sm:text-lg">{card.title}</h4>
+                                            <p className="text-xs sm:text-sm text-gray-400 mt-1 mb-2 sm:mb-3">{card.desc}</p>
                                             <div className="flex items-center gap-2">
-                                                <span className="text-gray-400 text-sm font-medium">Total:</span>
-                                                <span className="text-2xl font-bold text-gray-900">{card.count}</span>
+                                                <span className="text-gray-400 text-xs sm:text-sm font-medium">Total:</span>
+                                                <span className="text-xl sm:text-2xl font-bold text-gray-900">{card.count}</span>
                                             </div>
                                         </div>
                                     </div>

@@ -386,15 +386,15 @@ function MyVideosContent() {
   };
 
   return (
-    <div className="w-full px-6">
-      <header className="mb-6 md:mb-8 border-b pb-4 border-gray-200">
-        <div className="flex items-center justify-between">
+    <div className="w-full px-3 sm:px-6">
+      <header className="mb-4 sm:mb-6 md:mb-8 border-b pb-4 border-gray-200">
+        <div className="flex items-start sm:items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-800">My Uploaded Videos</h1>
-            <p className="text-sm md:text-base text-gray-500 mt-1">Manage and share your car videos.</p>
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800">My Uploaded Videos</h1>
+            <p className="text-sm text-gray-500 mt-1 hidden sm:block">Manage and share your car videos.</p>
           </div>
-          <div className="flex items-center gap-6">
-            <div className="relative hidden sm:block w-64">
+          <div className="flex items-center gap-3 sm:gap-6">
+            <div className="relative hidden sm:block w-48 md:w-64">
               <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
               <input
                 type="text"
@@ -404,9 +404,9 @@ function MyVideosContent() {
                 className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               />
             </div>
-            <div className="bg-blue-100 px-4 py-2 rounded-lg">
-              <p className="text-sm text-gray-600">Total Videos</p>
-              <p className="text-2xl font-bold text-blue-600">{videos.length}</p>
+            <div className="bg-blue-100 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-center">
+              <p className="text-xs text-gray-600">Videos</p>
+              <p className="text-xl sm:text-2xl font-bold text-blue-600">{videos.length}</p>
             </div>
           </div>
         </div>
@@ -482,11 +482,11 @@ function MyVideosContent() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider w-8">#</th>
-                  <th className="px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Video</th>
-                  <th className="px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Views</th>
-                  <th className="px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Reserve Link</th>
-                  <th className="px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider text-right">Actions</th>
+                  <th className="hidden sm:table-cell px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider w-8">#</th>
+                  <th className="px-3 sm:px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Video</th>
+                  <th className="px-3 sm:px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Views</th>
+                  <th className="hidden md:table-cell px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Reserve Link</th>
+                  <th className="px-3 sm:px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -511,12 +511,12 @@ function MyVideosContent() {
                             : 'bg-white hover:bg-gray-50/80'
                         }`}
                       >
-                        <td className="px-5 py-3.5 text-xs text-gray-300 font-medium">{globalIndex}</td>
-                        <td className="px-5 py-3.5">
-                          <div className="flex items-center gap-3">
+                        <td className="hidden sm:table-cell px-5 py-3.5 text-xs text-gray-300 font-medium">{globalIndex}</td>
+                        <td className="px-3 sm:px-5 py-3.5">
+                          <div className="flex items-center gap-2 sm:gap-3">
                             <button
                               type="button"
-                              className="w-20 h-14 bg-gray-900 rounded-xl overflow-hidden flex-shrink-0 border border-gray-200 cursor-pointer group/thumb relative flex items-center justify-center shadow-sm"
+                              className="w-16 h-11 sm:w-20 sm:h-14 bg-gray-900 rounded-xl overflow-hidden flex-shrink-0 border border-gray-200 cursor-pointer group/thumb relative flex items-center justify-center shadow-sm"
                               onClick={() => setSelectedVideo(video)}
                             >
                               {thumbSrc(video) ? (
@@ -531,7 +531,7 @@ function MyVideosContent() {
                                   }}
                                 />
                               ) : (
-                                <FaVideo className="text-gray-600" size={20} />
+                                <FaVideo className="text-gray-600" size={16} />
                               )}
                               <div className="absolute inset-0 bg-black/0 group-hover/thumb:bg-black/40 transition-all flex items-center justify-center">
                                 <div className="w-7 h-7 rounded-full bg-white/90 flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity shadow">
@@ -540,19 +540,19 @@ function MyVideosContent() {
                               </div>
                             </button>
                             <div className="min-w-0">
-                              <h3 className="font-semibold text-gray-900 text-sm truncate max-w-[220px] leading-tight">{displayName}</h3>
-                              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                              <h3 className="font-semibold text-gray-900 text-xs sm:text-sm truncate max-w-[130px] sm:max-w-[200px] md:max-w-[220px] leading-tight">{displayName}</h3>
+                              <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                                 {video.registration && (
-                                  <span className="px-2 py-0.5 bg-blue-50 text-blue-600 font-mono text-xs rounded-md border border-blue-100">
+                                  <span className="px-1.5 sm:px-2 py-0.5 bg-blue-50 text-blue-600 font-mono text-xs rounded-md border border-blue-100">
                                     {video.registration}
                                   </span>
                                 )}
                                 {isSold && (
-                                  <span className="px-2 py-0.5 bg-red-50 text-red-600 text-xs font-semibold rounded-md border border-red-200">
+                                  <span className="px-1.5 sm:px-2 py-0.5 bg-red-50 text-red-600 text-xs font-semibold rounded-md border border-red-200">
                                     Sold
                                   </span>
                                 )}
-                                <span className="flex items-center gap-1 text-xs text-gray-400">
+                                <span className="hidden sm:flex items-center gap-1 text-xs text-gray-400">
                                   <FaCalendar size={9} />
                                   {new Date(video.createdAt).toLocaleDateString('en-GB', {
                                     day: 'numeric',
@@ -564,13 +564,13 @@ function MyVideosContent() {
                             </div>
                           </div>
                         </td>
-                        <td className="px-5 py-3.5">
-                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-semibold border border-blue-100">
+                        <td className="px-3 sm:px-5 py-3.5">
+                          <div className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-semibold border border-blue-100">
                             <FaEye size={10} />
                             {video.viewCount || 0}
                           </div>
                         </td>
-                        <td className="px-5 py-3.5">
+                        <td className="hidden md:table-cell px-5 py-3.5">
                           <button
                             type="button"
                             onClick={() => openReserveLinkModal(video)}
@@ -584,7 +584,7 @@ function MyVideosContent() {
                             {hasReserveLink ? 'Edit Link' : 'Add Link'}
                           </button>
                         </td>
-                        <td className="px-5 py-3.5 text-right">
+                        <td className="px-3 sm:px-5 py-3.5 text-right">
                           <div className="inline-flex items-center gap-0.5 bg-gray-100 rounded-lg p-0.5 opacity-60 group-hover:opacity-100 transition-opacity">
                             <button
                               type="button"
@@ -592,7 +592,7 @@ function MyVideosContent() {
                               className="p-1.5 text-blue-600 hover:bg-white rounded-md transition-colors"
                               title="Send to Customer"
                             >
-                              <FaPaperPlane size={13} />
+                              <FaPaperPlane size={12} />
                             </button>
                             <button
                               type="button"
@@ -600,15 +600,15 @@ function MyVideosContent() {
                               className="p-1.5 text-blue-600 hover:bg-white rounded-md transition-colors"
                               title="Copy Link"
                             >
-                              <FaCopy size={13} />
+                              <FaCopy size={12} />
                             </button>
                             <button
                               type="button"
                               onClick={() => window.open(`${window.location.origin}/view/${video._id}`, '_blank')}
-                              className="p-1.5 text-emerald-600 hover:bg-white rounded-md transition-colors"
+                              className="hidden sm:block p-1.5 text-emerald-600 hover:bg-white rounded-md transition-colors"
                               title="Open Video"
                             >
-                              <FaExternalLinkAlt size={13} />
+                              <FaExternalLinkAlt size={12} />
                             </button>
                             <button
                               type="button"
@@ -616,7 +616,7 @@ function MyVideosContent() {
                               className="p-1.5 text-red-500 hover:bg-white rounded-md transition-colors"
                               title="Delete Video"
                             >
-                              <FaTrash size={13} />
+                              <FaTrash size={12} />
                             </button>
                           </div>
                         </td>
@@ -625,7 +625,7 @@ function MyVideosContent() {
                   })
                 ) : (
                   <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500 font-medium">
+                    <td colSpan={5} className="px-4 py-10 text-center text-gray-500 font-medium text-sm">
                       No videos found matching &quot;{searchTerm}&quot;
                     </td>
                   </tr>
@@ -635,31 +635,30 @@ function MyVideosContent() {
           </div>
 
           {totalPages > 1 && (
-            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50">
-              <p className="text-sm text-gray-500">
-                Showing{' '}
+            <div className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4 border-t border-gray-100 bg-gray-50 gap-2 flex-wrap">
+              <p className="text-xs sm:text-sm text-gray-500">
                 <span className="font-semibold text-gray-700">
                   {(currentPage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, filteredVideos.length)}
                 </span>{' '}
-                of <span className="font-semibold text-gray-700">{filteredVideos.length}</span> videos
+                of <span className="font-semibold text-gray-700">{filteredVideos.length}</span>
               </p>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <button
                   type="button"
                   onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
                   disabled={currentPage === 1}
-                  className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                  className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
                 >
-                  ← Previous
+                  ← Prev
                 </button>
-                <span className="text-sm text-gray-500 font-medium px-2">
-                  Page {currentPage} of {totalPages}
+                <span className="text-xs sm:text-sm text-gray-500 font-medium px-1 sm:px-2">
+                  {currentPage}/{totalPages}
                 </span>
                 <button
                   type="button"
                   onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
                   disabled={currentPage === totalPages}
-                  className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                  className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
                 >
                   Next →
                 </button>
@@ -670,8 +669,8 @@ function MyVideosContent() {
       )}
 
       {sendModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 sm:p-4 p-0">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md overflow-hidden animate-fade-in max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
               <h3 className="text-xl font-bold text-gray-800">Send Video Link</h3>
               <button type="button" onClick={handleCloseSendModal} className="text-gray-400 hover:text-gray-600 transition">
@@ -743,11 +742,11 @@ function MyVideosContent() {
 
       {selectedVideo && (
         <div
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-end sm:items-center justify-center sm:p-4 p-0"
           onClick={() => setSelectedVideo(null)}
         >
           <div
-            className="bg-white rounded-2xl max-w-4xl w-full overflow-hidden shadow-2xl animate-fade-in"
+            className="bg-white rounded-t-2xl sm:rounded-2xl sm:max-w-4xl w-full overflow-hidden shadow-2xl animate-fade-in max-h-[92vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="bg-gradient-to-r from-gray-900 to-gray-800 p-4 flex items-center justify-between text-white">
@@ -888,8 +887,8 @@ function MyVideosContent() {
       )}
 
       {reserveLinkModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-[70] sm:p-4 p-0">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md overflow-hidden animate-fade-in max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-emerald-50">
               <h3 className="text-xl font-bold text-gray-800">
                 🔒{' '}

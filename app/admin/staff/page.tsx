@@ -208,17 +208,17 @@ function ManageStaffContent() {
 
   return (
     <DashboardLayout>
-      <div className="w-full px-6 pb-12">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+      <div className="w-full px-3 sm:px-6 pb-12">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-5 sm:mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800">Staff</h1>
-            <p className="text-gray-500 mt-1">Manage your staff members and their account permissions.</p>
+            <h1 className="text-xl sm:text-3xl font-bold text-gray-800">Staff</h1>
+            <p className="text-sm text-gray-500 mt-1">Manage your staff members and their account permissions.</p>
           </div>
           <div className="flex gap-3">
             <button
               type="button"
               onClick={() => openModal()}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition shadow-sm"
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition shadow-sm text-sm"
             >
               <FaUserPlus size={14} />
               <span>New Member</span>
@@ -227,14 +227,14 @@ function ManageStaffContent() {
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-          <div className="p-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex bg-gray-100 p-1 rounded-lg self-start sm:self-auto">
+          <div className="p-3 sm:p-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+            <div className="flex bg-gray-100 p-1 rounded-lg self-start">
               {['All', 'Active', 'Inactive'].map((status) => (
                 <button
                   key={status}
                   type="button"
                   onClick={() => setFilterStatus(status)}
-                  className={`px-4 py-1.5 rounded-md text-sm font-medium transition ${
+                  className={`px-3 sm:px-4 py-1.5 rounded-md text-xs sm:text-sm font-medium transition ${
                     filterStatus === status
                       ? 'bg-white text-gray-800 shadow-sm'
                       : 'text-gray-500 hover:text-gray-700'
@@ -260,38 +260,49 @@ function ManageStaffContent() {
             </div>
           </div>
 
-          <div className="overflow-x-auto lg:overflow-visible">
+          <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-semibold sticky top-0">
                 <tr>
-                  <th className="px-6 py-4 w-10">
+                  <th className="hidden sm:table-cell px-4 sm:px-6 py-3 sm:py-4 w-10">
                     <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" readOnly />
                   </th>
-                  <th className="px-6 py-4">Member Name</th>
-                  <th className="px-6 py-4">Contact Details</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4 text-right">Actions</th>
+                  <th className="px-4 sm:px-6 py-3 sm:py-4">Member</th>
+                  <th className="hidden md:table-cell px-4 sm:px-6 py-3 sm:py-4">Contact Details</th>
+                  <th className="hidden sm:table-cell px-4 sm:px-6 py-3 sm:py-4">Status</th>
+                  <th className="px-4 sm:px-6 py-3 sm:py-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {filteredStaff.length > 0 ? (
                   filteredStaff.map((member) => (
                     <tr key={member._id} className="hover:bg-gray-50 transition relative">
-                      <td className="px-6 py-4">
+                      <td className="hidden sm:table-cell px-4 sm:px-6 py-3 sm:py-4">
                         <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" readOnly />
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold shadow-sm">
+                      <td className="px-4 sm:px-6 py-3 sm:py-4">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-9 h-9 sm:w-10 sm:h-10 flex-shrink-0 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold shadow-sm text-sm">
                             {member.username.charAt(0).toUpperCase()}
                           </div>
-                          <div>
-                            <p className="font-semibold text-gray-800">{member.name || member.username}</p>
+                          <div className="min-w-0">
+                            <p className="font-semibold text-gray-800 text-sm truncate">{member.name || member.username}</p>
                             <p className="text-xs text-gray-500">@{member.username}</p>
+                            {/* Show contact inline on small screens */}
+                            <div className="md:hidden mt-1 space-y-0.5">
+                              <div className="flex items-center gap-1 text-xs text-gray-500">
+                                <FaPhone size={9} className="text-gray-400" />
+                                <span className="truncate">{member.phoneNumber}</span>
+                              </div>
+                              <div className="flex items-center gap-1 text-xs text-gray-400">
+                                <FaEnvelope size={9} className="text-gray-400" />
+                                <span className="truncate max-w-[140px]">{member.email}</span>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="hidden md:table-cell px-4 sm:px-6 py-3 sm:py-4">
                         <div className="space-y-1">
                           <div className="flex items-center gap-2 text-sm text-gray-600">
                             <FaPhone size={12} className="text-gray-400" />
@@ -303,13 +314,13 @@ function ManageStaffContent() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="hidden sm:table-cell px-4 sm:px-6 py-3 sm:py-4">
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                           Available
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 text-right">
                         <div className="relative inline-block">
                           <button
                             type="button"
@@ -379,7 +390,7 @@ function ManageStaffContent() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan={5} className="px-4 py-10 text-center text-gray-500 text-sm">
                       No staff members found matching your filters.
                     </td>
                   </tr>
@@ -388,14 +399,13 @@ function ManageStaffContent() {
             </table>
           </div>
 
-          <div className="p-4 border-t border-gray-100 flex items-center justify-between text-sm text-gray-500">
+          <div className="p-3 sm:p-4 border-t border-gray-100 flex items-center justify-between text-xs sm:text-sm text-gray-500 gap-2 flex-wrap">
             <p>
-              Showing{' '}
               <span className="font-medium text-gray-800">
                 1-{filteredStaff.length}
               </span>{' '}
               of{' '}
-              <span className="font-medium text-gray-800">{filteredStaff.length}</span> entries
+              <span className="font-medium text-gray-800">{filteredStaff.length}</span>
             </p>
             <div className="flex gap-2">
               <button
@@ -424,8 +434,8 @@ function ManageStaffContent() {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-fade-in">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 sm:p-4 p-0">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg overflow-hidden animate-fade-in max-h-[92vh] overflow-y-auto">
             <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
               <h3 className="text-xl font-bold text-gray-800">
                 {editingMember ? 'Edit Staff Member' : 'Add New Member'}
@@ -562,8 +572,8 @@ function ManageStaffContent() {
       )}
 
       {resetPasswordModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-fade-in">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 sm:p-4 p-0">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-sm overflow-hidden animate-fade-in">
             <div className="bg-amber-500 p-6 text-white text-center">
               <div className="mx-auto w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mb-3">
                 <FaKey size={20} />

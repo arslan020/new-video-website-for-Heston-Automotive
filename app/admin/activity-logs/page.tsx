@@ -89,13 +89,13 @@ function ActivityLogsContent() {
 
   return (
     <DashboardLayout>
-      <div className="w-full px-6 pb-12">
-        <header className="mb-8 border-b pb-4 border-gray-200">
-          <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
-            <FaHistory className="text-blue-600" />
+      <div className="w-full px-3 sm:px-6 pb-12">
+        <header className="mb-5 sm:mb-8 border-b pb-4 border-gray-200">
+          <h1 className="text-xl sm:text-3xl font-bold text-gray-800 flex items-center gap-2 sm:gap-3">
+            <FaHistory className="text-blue-600 flex-shrink-0" />
             Activity Logs
           </h1>
-          <p className="text-gray-500 mt-1 ml-11">Track staff actions across the portal.</p>
+          <p className="text-sm text-gray-500 mt-1 ml-7 sm:ml-11">Track staff actions across the portal.</p>
         </header>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -110,36 +110,44 @@ function ActivityLogsContent() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200 text-xs uppercase text-gray-500 font-semibold tracking-wider">
-                    <th className="px-6 py-4">Action</th>
-                    <th className="px-6 py-4">Staff Member</th>
-                    <th className="px-6 py-4">Details</th>
-                    <th className="px-6 py-4">Time</th>
+                    <th className="px-3 sm:px-6 py-3 sm:py-4">Action</th>
+                    <th className="px-3 sm:px-6 py-3 sm:py-4">Staff</th>
+                    <th className="hidden md:table-cell px-6 py-4">Details</th>
+                    <th className="hidden sm:table-cell px-4 sm:px-6 py-3 sm:py-4">Time</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {logs.map((log) => (
                     <tr key={log._id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-3">
+                      <td className="px-3 sm:px-6 py-3 sm:py-4">
+                        <div className="flex items-center gap-2 sm:gap-3">
                           {getActionIcon(log.action)}
-                          <span className={getActionColor(log.action)}>
-                            {log.action.replace('_', ' ')}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
-                            <FaUser size={12} />
-                          </div>
                           <div>
-                            <p className="text-sm font-medium text-gray-900">{log.user?.name || 'Unknown'}</p>
-                            <p className="text-xs text-gray-500">{log.user?.email}</p>
+                            <span className={`text-xs sm:text-sm ${getActionColor(log.action)}`}>
+                              {log.action.replace('_', ' ')}
+                            </span>
+                            {/* Details inline on mobile */}
+                            <p className="md:hidden text-xs text-gray-500 mt-0.5 line-clamp-1">{log.details}</p>
+                            {/* Time inline on xs */}
+                            <p className="sm:hidden text-xs text-gray-400 mt-0.5">
+                              {new Date(log.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                            </p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{log.details}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-3 sm:px-6 py-3 sm:py-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
+                            <FaUser size={11} />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">{log.user?.name || 'Unknown'}</p>
+                            <p className="text-xs text-gray-500 truncate hidden sm:block">{log.user?.email}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="hidden md:table-cell px-6 py-4 text-sm text-gray-600">{log.details}</td>
+                      <td className="hidden sm:table-cell px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-500 whitespace-nowrap">
                         {new Date(log.createdAt).toLocaleString('en-GB', {
                           day: '2-digit',
                           month: 'short',
@@ -156,25 +164,25 @@ function ActivityLogsContent() {
           )}
 
           {pages > 1 && (
-            <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+            <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-200 flex items-center justify-between gap-2">
               <button
                 type="button"
                 disabled={page === 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 sm:px-4 py-1.5 sm:py-2 text-sm border rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Previous
+                ← Prev
               </button>
-              <span className="text-sm text-gray-600">
-                Page {page} of {pages}
+              <span className="text-xs sm:text-sm text-gray-600">
+                {page} / {pages}
               </span>
               <button
                 type="button"
                 disabled={page === pages}
                 onClick={() => setPage((p) => Math.min(pages, p + 1))}
-                className="px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 sm:px-4 py-1.5 sm:py-2 text-sm border rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Next
+                Next →
               </button>
             </div>
           )}

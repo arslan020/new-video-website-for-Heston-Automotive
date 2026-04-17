@@ -238,7 +238,7 @@ const StaffDashboard = () => {
                             </div>
                         </div>
                         <div className="min-w-0">
-                            <p className="font-semibold text-gray-900 text-sm truncate max-w-[160px]">{displayName}</p>
+                            <p className="font-semibold text-gray-900 text-sm truncate max-w-[120px] sm:max-w-[160px] md:max-w-[200px]">{displayName}</p>
                             <div className="flex items-center gap-1.5 mt-0.5">
                                 {video.registration && (
                                     <span className="text-xs font-mono text-blue-600">{video.registration}</span>
@@ -269,16 +269,16 @@ const StaffDashboard = () => {
 
     return (
         <DashboardLayout>
-            <div className="w-full px-6 pb-10">
+            <div className="w-full px-3 sm:px-6 pb-10">
 
                 {/* Header */}
-                <header className="mb-6 md:mb-8 border-b pb-5 border-gray-200 animate-fadeIn">
+                <header className="mb-5 md:mb-8 border-b pb-4 sm:pb-5 border-gray-200 animate-fadeIn">
                     <div className="flex items-center justify-between gap-4 flex-wrap">
                         <div>
-                            <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 tracking-tight">
+                            <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold text-gray-900 tracking-tight">
                                 {getGreeting()}, {user?.name || 'there'} 👋
                             </h1>
-                            <p className="text-sm text-gray-400 mt-1 flex items-center gap-1.5">
+                            <p className="text-xs sm:text-sm text-gray-400 mt-1 flex items-center gap-1.5">
                                 <FaCalendarAlt size={11} />
                                 {getTodayDate()}
                             </p>
@@ -287,22 +287,22 @@ const StaffDashboard = () => {
                 </header>
 
                 {/* Stat Cards */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
                     <div
                         onClick={() => router.push('/staff/videos')}
-                        className="cursor-pointer p-5 bg-blue-500 rounded-2xl shadow-lg shadow-blue-500/30 text-white transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-500/40"
+                        className="cursor-pointer p-4 sm:p-5 bg-blue-500 rounded-2xl shadow-lg shadow-blue-500/30 text-white transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-500/40"
                     >
                         <div className="flex items-start justify-between gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center border border-white/10">
-                                <FaVideo className="text-white" size={17} />
+                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/20 flex items-center justify-center border border-white/10">
+                                <FaVideo className="text-white" size={15} />
                             </div>
-                            <FaChartLine size={16} className="text-white/60 mt-1" />
+                            <FaChartLine size={14} className="text-white/60 mt-1" />
                         </div>
-                        <div className="mt-4">
-                            <div className="text-3xl font-bold leading-tight tracking-tight">{videos.length}</div>
+                        <div className="mt-3 sm:mt-4">
+                            <div className="text-2xl sm:text-3xl font-bold leading-tight tracking-tight">{videos.length}</div>
                             <div className="mt-1 text-xs font-medium text-blue-100">Total Videos</div>
                         </div>
-                        <div className="mt-3 flex items-center gap-1 text-blue-100 text-xs">
+                        <div className="mt-2 sm:mt-3 flex items-center gap-1 text-blue-100 text-xs">
                             <span>View all</span>
                             <FaArrowRight size={9} />
                         </div>
@@ -310,19 +310,19 @@ const StaffDashboard = () => {
 
                     <div
                         onClick={() => router.push('/staff/views')}
-                        className="cursor-pointer p-5 bg-purple-500 rounded-2xl shadow-lg shadow-purple-500/30 text-white transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-purple-500/40"
+                        className="cursor-pointer p-4 sm:p-5 bg-purple-500 rounded-2xl shadow-lg shadow-purple-500/30 text-white transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-purple-500/40"
                     >
                         <div className="flex items-start justify-between gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center border border-white/10">
-                                <FaEye className="text-white" size={17} />
+                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/20 flex items-center justify-center border border-white/10">
+                                <FaEye className="text-white" size={15} />
                             </div>
-                            <FaChartLine size={16} className="text-white/60 mt-1" />
+                            <FaChartLine size={14} className="text-white/60 mt-1" />
                         </div>
-                        <div className="mt-4">
-                            <div className="text-3xl font-bold leading-tight tracking-tight">{totalViews}</div>
+                        <div className="mt-3 sm:mt-4">
+                            <div className="text-2xl sm:text-3xl font-bold leading-tight tracking-tight">{totalViews}</div>
                             <div className="mt-1 text-xs font-medium text-purple-100">Total Views</div>
                         </div>
-                        <div className="mt-3 flex items-center gap-1 text-purple-100 text-xs">
+                        <div className="mt-2 sm:mt-3 flex items-center gap-1 text-purple-100 text-xs">
                             <span>Analytics</span>
                             <FaArrowRight size={9} />
                         </div>
@@ -330,39 +330,40 @@ const StaffDashboard = () => {
 
                     <div
                         onClick={() => router.push('/staff/videos')}
-                        className="cursor-pointer p-5 bg-green-500 rounded-2xl shadow-lg shadow-green-500/30 text-white transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-green-500/40"
+                        className="cursor-pointer p-4 sm:p-5 bg-green-500 rounded-2xl shadow-lg shadow-green-500/30 text-white transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-green-500/40"
                     >
                         <div className="flex items-start justify-between gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center border border-white/10">
-                                <FaClock className="text-white" size={17} />
+                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/20 flex items-center justify-center border border-white/10">
+                                <FaClock className="text-white" size={15} />
                             </div>
-                            <FaFire size={16} className="text-white/60 mt-1" />
+                            <FaFire size={14} className="text-white/60 mt-1" />
                         </div>
-                        <div className="mt-4">
-                            <div className="text-3xl font-bold leading-tight tracking-tight">{videosThisWeek}</div>
-                            <div className="mt-1 text-xs font-medium text-green-100">Uploaded This Week</div>
+                        <div className="mt-3 sm:mt-4">
+                            <div className="text-2xl sm:text-3xl font-bold leading-tight tracking-tight">{videosThisWeek}</div>
+                            <div className="mt-1 text-xs font-medium text-green-100">This Week</div>
                         </div>
-                        <div className="mt-3 flex items-center gap-1 text-green-100 text-xs">
-                            <span>Recent uploads</span>
+                        <div className="mt-2 sm:mt-3 flex items-center gap-1 text-green-100 text-xs">
+                            <span className="hidden sm:inline">Recent uploads</span>
+                            <span className="sm:hidden">Uploads</span>
                             <FaArrowRight size={9} />
                         </div>
                     </div>
 
                     <div
                         onClick={() => router.push('/staff/stock')}
-                        className="cursor-pointer p-5 bg-orange-500 rounded-2xl shadow-lg shadow-orange-500/30 text-white transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-orange-500/40"
+                        className="cursor-pointer p-4 sm:p-5 bg-orange-500 rounded-2xl shadow-lg shadow-orange-500/30 text-white transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-orange-500/40"
                     >
                         <div className="flex items-start justify-between gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center border border-white/10">
-                                <FaCar className="text-white" size={17} />
+                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/20 flex items-center justify-center border border-white/10">
+                                <FaCar className="text-white" size={15} />
                             </div>
-                            <FaChartLine size={16} className="text-white/60 mt-1" />
+                            <FaChartLine size={14} className="text-white/60 mt-1" />
                         </div>
-                        <div className="mt-4">
-                            <div className="text-3xl font-bold leading-tight tracking-tight">{stock.length}</div>
+                        <div className="mt-3 sm:mt-4">
+                            <div className="text-2xl sm:text-3xl font-bold leading-tight tracking-tight">{stock.length}</div>
                             <div className="mt-1 text-xs font-medium text-orange-100">Cars in Stock</div>
                         </div>
-                        <div className="mt-3 flex items-center gap-1 text-orange-100 text-xs">
+                        <div className="mt-2 sm:mt-3 flex items-center gap-1 text-orange-100 text-xs">
                             <span>View stock</span>
                             <FaArrowRight size={9} />
                         </div>
@@ -391,7 +392,7 @@ const StaffDashboard = () => {
                         ))}
                     </div>
                 ) : videos.length > 0 && (
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 items-stretch">
                         {/* Recent Uploads */}
                         <div className="flex flex-col">
                             <div className="flex items-center justify-between mb-3">
@@ -526,12 +527,12 @@ const StaffDashboard = () => {
 
             {/* Video Preview Modal */}
             {selectedVideo && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setSelectedVideo(null)}>
+                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 p-0" onClick={() => setSelectedVideo(null)}>
                     {/* Backdrop */}
                     <div className="absolute inset-0 bg-black/70 backdrop-blur-md" />
 
                     <div
-                        className="relative w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl"
+                        className="relative w-full sm:max-w-2xl rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl max-h-[90vh] overflow-y-auto"
                         style={{ background: 'linear-gradient(145deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)' }}
                         onClick={(e) => e.stopPropagation()}
                     >
@@ -618,8 +619,8 @@ const StaffDashboard = () => {
 
             {/* Reserve Link Modal */}
             {reserveLinkModalOpen && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in">
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 sm:p-4 p-0">
+                    <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md overflow-hidden animate-fade-in">
                         <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2 tracking-tight">
                                 <FaLink className="text-blue-700" />

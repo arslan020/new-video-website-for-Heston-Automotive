@@ -47,14 +47,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             >
               <FaBars size={24} />
             </button>
-            <Image
-              src="/business-logo.png"
-              alt="Heston Automotive"
-              width={160}
-              height={40}
-              style={{ width: 'auto', height: '40px' }}
-              className="object-contain"
-            />
+            <button onClick={() => router.push(user.role === 'admin' ? '/admin' : '/staff')} className="focus:outline-none">
+              <Image
+                src="/business-logo.png"
+                alt="Heston Automotive"
+                width={160}
+                height={40}
+                className="object-contain h-10 w-auto"
+              />
+            </button>
           </div>
 
           {/* Right side — User dropdown */}
@@ -92,7 +93,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </header>
 
-        <main className="flex-1 p-4 md:p-8">
+        <main className="flex-1 p-3 sm:p-4 md:p-8">
           {children}
         </main>
       </div>

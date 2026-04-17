@@ -167,22 +167,22 @@ function UploadContent() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6 px-0 sm:px-0">
       <div>
-        <h1 className="text-2xl font-bold text-gray-800">Upload Video</h1>
-        <p className="text-gray-500 mt-1">Add a new vehicle video to the portal</p>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Upload Video</h1>
+        <p className="text-sm text-gray-500 mt-1">Add a new vehicle video to the portal</p>
       </div>
 
       {done ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-10 text-center">
-          <div className="text-5xl mb-4">✅</div>
-          <h2 className="text-xl font-semibold text-gray-800">Upload Complete!</h2>
-          <p className="text-gray-500 mt-2">Your video has been saved successfully.</p>
-          <div className="flex gap-3 justify-center mt-6">
-            <button onClick={resetForm} className="px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sm:p-10 text-center">
+          <div className="text-4xl sm:text-5xl mb-3 sm:mb-4">✅</div>
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-800">Upload Complete!</h2>
+          <p className="text-sm text-gray-500 mt-2">Your video has been saved successfully.</p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center mt-5 sm:mt-6">
+            <button onClick={resetForm} className="px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition text-sm">
               Upload Another
             </button>
-            <a href="/staff/videos" className="px-5 py-2.5 border border-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition">
+            <a href="/staff/videos" className="px-5 py-2.5 border border-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition text-sm text-center">
               View My Videos
             </a>
           </div>
@@ -207,7 +207,7 @@ function UploadContent() {
             </button>
           </div>
 
-          <div className="p-6 space-y-5">
+          <div className="p-4 sm:p-6 space-y-4 sm:space-y-5">
             {/* Registration Lookup */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Registration Plate</label>
