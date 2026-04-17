@@ -96,7 +96,23 @@ function StockContent() {
   const [uploadPhase, setUploadPhase] = useState<'server' | 'cloudflare'>('server');
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [uploadError, setUploadError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return 'N/A';
+    try { return new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); }
+    catch { return 'N/A'; }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); };
+  const handleDragLeave = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(false); };
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault(); setIsDragging(false);
+    const f = e.dataTransfer.files[0];
+    if (f && f.type.startsWith('video/')) setSelectedFile(f);
+    else showToast('Please select a valid video file', 'error');
+  };
 
   // Direct Upload Modal
   const [directUploadOpen, setDirectUploadOpen] = useState(false);
@@ -492,32 +508,36 @@ function StockContent() {
                                         )}
                                     </td>
                                     <td className="px-6 py-4 text-right">
-                                        <div className="relative inline-block">
-                                            <button onClick={() => setActiveMenu(activeMenu === uId ? null : uId)} className={`p-2 rounded-full transition ${activeMenu === uId ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}><FaEllipsisV /></button>
-                                            {activeMenu === uId && (
-                                                <>
-                                                    <div className="fixed inset-0 z-40" onClick={() => setActiveMenu(null)}></div>
-                                                    <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-xl border border-gray-100 z-50 p-1 animate-fade-in origin-top-right">
-                                                        {hasVid ? (
-                                                            <>
-                                                              <button onClick={() => { copyToClipboard(matchingVideos[0]._id); setActiveMenu(null); }} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 font-medium"><FaCopy className="text-gray-400"/> Copy Link</button>
-                                                              <button onClick={() => { setSelectedVideo(matchingVideos[0]); setSendModalOpen(true); setActiveMenu(null); }} className="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2 font-medium"><FaPaperPlane /> Send to Customer</button>
-                                                              <div className="border-t border-gray-100 my-1"/>
-                                                              <button onClick={() => handleOpenReserveModal(item)} className="w-full text-left px-4 py-2 text-sm text-purple-600 hover:bg-purple-50 flex items-center gap-2 font-medium"><FaLink /> Reserve Link</button>
-                                                              <div className="border-t border-gray-100 my-1"/>
-                                                              <button onClick={() => { handleDeleteVideo(matchingVideos[0]); setActiveMenu(null); }} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 font-medium"><FaTrash className="text-red-400"/> Delete Video</button>
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                              <button onClick={() => { setSelectedStockItem(item); setDirectUploadOpen(true); setActiveMenu(null); }} className="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-md flex items-center gap-2 font-medium transition"><FaCloudUploadAlt size={16}/> Upload Video</button>
-                                                              <div className="border-t border-gray-100 my-1"/>
-                                                              <button onClick={() => handleOpenReserveModal(item)} className="w-full text-left px-4 py-2 text-sm text-purple-600 hover:bg-purple-50 flex items-center gap-2 font-medium"><FaLink /> Reserve Link</button>
-                                                            </>
-                                                        )}
-                                                    </div>
-                                                </>
-                                            )}
-                                        </div>
+                                        {hasVid ? (
+                                            <div className="relative inline-block">
+                                                <button onClick={() => setActiveMenu(activeMenu === uId ? null : uId)} className={`p-2 rounded-full transition ${activeMenu === uId ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}><FaEllipsisV /></button>
+                                                {activeMenu === uId && (
+                                                    <>
+                                                        <div className="fixed inset-0 z-40" onClick={() => setActiveMenu(null)}></div>
+                                                        <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-xl border border-gray-100 z-50 p-1 animate-fade-in origin-top-right">
+                                                            <button onClick={() => { handleDeleteVideo(matchingVideos[0]); setActiveMenu(null); }} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md flex items-center gap-2 transition font-medium"><FaTrash size={14} /> Delete Video</button>
+                                                            {matchingVideos.map((vid, idx) => (
+                                                                <div key={vid._id} className="border-t border-gray-50 mt-1 pt-1">
+                                                                    {matchingVideos.length > 1 && <div className="px-4 py-1.5 text-xs font-bold text-gray-400 bg-gray-50 uppercase tracking-wider">Video {idx + 1}</div>}
+                                                                    <button onClick={() => { copyToClipboard(vid._id); setActiveMenu(null); }} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center gap-2 transition"><FaCopy size={14} className="text-gray-400" /> Copy Link</button>
+                                                                    <button onClick={() => { window.open(`/view/${vid._id}`, '_blank'); setActiveMenu(null); }} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center gap-2 transition"><FaExternalLinkAlt size={14} className="text-gray-400" /> Open Video</button>
+                                                                    <button onClick={() => { setSelectedVideo(vid); setSendModalOpen(true); setActiveMenu(null); }} className="w-full text-left px-4 py-2 text-sm text-purple-600 hover:bg-purple-50 rounded-md flex items-center gap-2 transition font-medium"><FaPaperPlane size={14} className="text-purple-500/70" /> Send to Customer</button>
+                                                                </div>
+                                                            ))}
+                                                            <div className="border-t border-gray-100 mt-1 pt-1">
+                                                                <button onClick={() => { handleOpenReserveModal(item); setActiveMenu(null); }} className="w-full text-left px-4 py-2 text-sm text-emerald-600 hover:bg-emerald-50 rounded-md flex items-center gap-2 transition">
+                                                                    <span>🔒</span> {vehicleMetadata[(v.registration || '').replace(/\s/g, '').toUpperCase()]?.reserveLink ? 'Edit Reserve Link' : 'Add Reserve Link'}
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <button onClick={() => { setSelectedStockItem(item); setDirectUploadOpen(true); setActiveMenu(null); }} className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 transition shadow-sm hover:shadow-md">
+                                                <FaCloudUploadAlt /> Upload
+                                            </button>
+                                        )}
                                     </td>
                                 </tr>
                             )
@@ -570,146 +590,231 @@ function StockContent() {
 
       {/* Smart Upload Modal */}
       {smartUploadOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto pt-20 pb-20">
-              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-scale-up my-auto">
-                 <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex justify-center items-center"><FaVideo size={14}/></div>
-                        <h2 className="text-xl font-bold text-gray-800">Smart Video Upload</h2>
-                    </div>
-                    <button onClick={() => setSmartUploadOpen(false)} aria-label="Close" className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-red-100 hover:text-red-500 transition text-gray-500"><FaTimes /></button>
-                 </div>
-                 <div className="p-6">
-                    {uploadSuccess ? (
-                        <div className="py-12 text-center text-green-600">
-                           <FaCheckCircle className="mx-auto text-6xl mb-4" />
-                           <h3 className="text-2xl font-bold text-gray-800">Upload Complete!</h3>
-                           <p className="mt-2 text-gray-500">Your video is ready to be shared</p>
-                        </div>
-                    ) : uploading ? (
-                        <div className="py-12 px-8">
-                            <div className="mb-2 flex justify-between items-center">
-                               <span className="font-medium text-gray-700">{uploadPhase === 'server' ? 'Processing server upload...' : 'Encoding globally with Cloudflare...'}</span>
-                               <span className="font-bold text-blue-600">{uploadProgress}%</span>
-                            </div>
-                            <div className="w-full bg-gray-100 rounded-full h-3 mb-6 overflow-hidden">
-                                <div className="bg-gradient-to-r from-blue-500 to-indigo-600 h-3 rounded-full transition-all duration-300 relative" style={{width: `${uploadProgress}%`}}>
-                                    <div className="absolute top-0 bottom-0 left-0 right-0 overflow-hidden"><div className="w-full h-full bg-white/20" style={{ backgroundImage: 'linear-gradient(45deg,rgba(255,255,255,.15) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.15) 50%,rgba(255,255,255,.15) 75%,transparent 75%,transparent)', backgroundSize: '1rem 1rem', animation: 'progress-stripes 1s linear infinite' }}/></div>
-                                </div>
-                            </div>
-                        </div>
-                    ) : !fetchedVehicle ? (
-                        <div>
-                            <form onSubmit={handleLookup} className="mb-8">
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">Vehicle Registration Plate</label>
-                                <div className="flex gap-3">
-                                   <input type="text" value={lookupRegistration} onChange={e => setLookupRegistration(e.target.value.toUpperCase())} placeholder="e.g. AB12CDE" className="flex-1 px-4 py-3 border-2 border-yellow-400 bg-yellow-50/30 rounded-xl text-lg font-bold uppercase tracking-widest focus:ring-4 focus:ring-yellow-400/20 focus:border-yellow-500 focus:outline-none transition shadow-sm" />
-                                   <button type="submit" disabled={lookupLoading || !lookupRegistration} className="px-6 py-3 bg-gray-900 hover:bg-gray-800 text-white rounded-xl font-semibold transition disabled:opacity-50">
-                                       {lookupLoading ? <span className="animate-spin inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full" /> : 'Lookup'}
-                                   </button>
-                                </div>
-                            </form>
-                            <div className="p-5 bg-blue-50/50 rounded-xl border border-blue-100 flex items-start gap-3">
-                                <FaCheckCircle className="text-blue-500 mt-1 flex-shrink-0" />
-                                <div className="text-sm text-gray-600"><p className="font-semibold text-gray-800 mb-1">How it works</p><p>We query the DVLA database to automatically populate all technical specifications, saving you from manual data entry.</p></div>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="space-y-6">
-                            {/* Vehicle Match Card */}
-                            <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 flex flex-col md:flex-row gap-4 justify-between items-center shadow-sm">
-                                <div className="flex items-center gap-4">
-                                     <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex justify-center items-center flex-shrink-0"><FaCar size={20}/></div>
-                                     <div>
-                                         <h3 className="font-bold text-gray-900">{fetchedVehicle.make} {fetchedVehicle.model}</h3>
-                                         <p className="text-sm text-gray-500 truncate max-w-xs">{fetchedVehicle.derivative || `${fetchedVehicle.transmissionType} • ${fetchedVehicle.fuelType}`}</p>
-                                     </div>
-                                </div>
-                                <div className="flex flex-col items-end gap-1">
-                                    <span className="px-3 py-1 bg-yellow-400 text-gray-900 font-bold uppercase tracking-widest text-sm rounded shadow-sm border border-yellow-500">{fetchedVehicle.registration}</span>
-                                    <button onClick={() => setFetchedVehicle(null)} className="text-xs text-blue-600 hover:underline font-medium">Wrong vehicle?</button>
-                                </div>
-                            </div>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div><label className="block text-sm font-semibold text-gray-700 mb-1">Current Mileage</label><input type="number" value={smartMileage} onChange={e=>setSmartMileage(e.target.value)} placeholder="e.g. 45000" className="w-full px-4 py-2 border border-gray-200 rounded-lg" /></div>
-                                <div><label className="block text-sm font-semibold text-gray-700 mb-1">Reserve Link (Optional)</label><input type="url" value={smartReserveLink} onChange={e=>setSmartReserveLink(e.target.value)} placeholder="https://..." className="w-full px-4 py-2 border border-gray-200 rounded-lg" /></div>
-                            </div>
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
+            {/* Header */}
+            <div className="bg-gray-900 text-white p-5 flex justify-between items-center shrink-0">
+              <h3 className="text-lg font-bold flex items-center gap-2">
+                <FaVideo className="text-blue-400" /> Find Vehicle & Upload
+              </h3>
+              <button onClick={() => { setSmartUploadOpen(false); resetUploadState(); setLookupRegistration(''); setFetchedVehicle(null); }} className="text-gray-400 hover:text-white transition"><FaTimes size={24} /></button>
+            </div>
 
-                            <div className="pt-2">
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">Upload Video File</label>
-                                <div 
-                                   onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                                   onDragLeave={(e) => { e.preventDefault(); setIsDragging(false); }}
-                                   onDrop={(e) => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files[0]; if(f && f.type.startsWith('video/')) setSelectedFile(f); else showToast('Invalid video format', 'error'); }}
-                                   className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'}`}
-                                >
-                                    <input type="file" ref={fileInputRef} accept="video/mp4,video/quicktime,video/*" onChange={handleFileSelect} className="hidden" />
-                                    <div className="w-16 h-16 rounded-full bg-blue-100 text-blue-600 flex justify-center items-center mx-auto mb-4"><FaCloudUploadAlt size={28} /></div>
-                                    <h4 className="text-lg font-semibold text-gray-800 mb-1">Drag & Drop your video</h4>
-                                    <p className="text-sm text-gray-500 mb-4">or click to browse from your device</p>
-                                    <button onClick={() => fileInputRef.current?.click()} className="px-5 py-2.5 bg-white border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition shadow-sm">Browse Files</button>
-                                </div>
-                                {selectedFile && <div className="mt-4 p-3 bg-blue-50 border border-blue-100 rounded-lg flex justify-between items-center"><div className="flex items-center gap-3"><FaFile className="text-blue-500" /><div className="max-w-[200px] sm:max-w-xs md:max-w-sm truncate"><p className="text-sm font-semibold text-gray-800 truncate">{selectedFile.name}</p><p className="text-xs text-gray-500">{(selectedFile.size / (1024*1024)).toFixed(2)} MB</p></div></div><button onClick={()=>setSelectedFile(null)} className="text-red-500 hover:text-red-700 p-1 bg-white rounded-md shadow-sm"><FaTimes/></button></div>}
-                            </div>
-                            <div className="pt-4 border-t border-gray-100 flex justify-end gap-3"><button onClick={() => setSmartUploadOpen(false)} className="px-5 py-2.5 text-gray-600 hover:bg-gray-100 rounded-lg font-medium">Cancel</button><button onClick={handleSmartUpload} disabled={!selectedFile} className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold disabled:opacity-50 flex items-center gap-2"><FaCloudUploadAlt/> Start Upload</button></div>
+            {/* Content */}
+            <div className="overflow-y-auto p-6 flex-1">
+              {!fetchedVehicle ? (
+                <div className="max-w-md mx-auto py-8">
+                  <div className="text-center mb-6">
+                    <FaSearch className="mx-auto text-blue-600 mb-3" size={32} />
+                    <h4 className="text-xl font-bold text-gray-800">Enter Registration</h4>
+                    <p className="text-sm text-gray-500">We'll fetch the car details automatically.</p>
+                  </div>
+                  <form onSubmit={handleLookup}>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={lookupRegistration}
+                        onChange={(e) => setLookupRegistration(e.target.value.toUpperCase())}
+                        placeholder="AB12 CDE"
+                        className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg text-lg font-bold uppercase tracking-wider focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        autoFocus
+                      />
+                      <button type="submit" disabled={lookupLoading} className="bg-blue-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-blue-700 transition disabled:opacity-50">
+                        {lookupLoading ? 'Please Wait...' : 'Lookup'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Vehicle Details Card */}
+                  <div className="bg-blue-50 rounded-xl p-5 border border-blue-100">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h2 className="text-2xl font-bold text-gray-800">{fetchedVehicle.make} {fetchedVehicle.model}</h2>
+                        <p className="text-gray-600">{fetchedVehicle.derivative}</p>
+                      </div>
+                      <span className="bg-yellow-400 text-black px-3 py-1 rounded font-bold text-lg tracking-wider border-2 border-black">{fetchedVehicle.registration}</span>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div className="flex items-center gap-2"><FaGasPump className="text-gray-400" /> {fetchedVehicle.fuelType || 'N/A'}</div>
+                      <div className="flex items-center gap-2"><FaCog className="text-gray-400" /> {fetchedVehicle.transmissionType || 'N/A'}</div>
+                      <div className="flex items-center gap-2"><FaPalette className="text-gray-400" /> {fetchedVehicle.colour || 'N/A'}</div>
+                      <div className="flex items-center gap-2"><FaCalendar className="text-gray-400" /> {formatDate(fetchedVehicle.firstRegistrationDate)}</div>
+                    </div>
+                    <button onClick={() => setFetchedVehicle(null)} className="text-xs text-blue-600 mt-4 font-medium hover:underline">← Not the right car? Search again</button>
+                  </div>
+
+                  {!uploadSuccess ? (
+                    <div className="border-t pt-2">
+                      <h4 className="font-bold text-gray-700 mb-3">Upload Video File</h4>
+
+                      <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-1">Mileage</label>
+                          <input type="number" value={smartMileage} onChange={(e) => setSmartMileage(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="e.g. 45000" onClick={(e) => e.stopPropagation()} />
                         </div>
-                    )}
-                 </div>
-              </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-1">Reserve Car Link</label>
+                          <input type="url" value={smartReserveLink} onChange={(e) => setSmartReserveLink(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="https://..." onClick={(e) => e.stopPropagation()} />
+                        </div>
+                      </div>
+
+                      <div
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                        onClick={() => fileInputRef.current?.click()}
+                        className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all mb-4 ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'}`}
+                      >
+                        <input ref={fileInputRef} type="file" accept="video/*" onChange={handleFileSelect} className="hidden" />
+                        <FaCloudUploadAlt className={`mx-auto mb-3 ${isDragging ? 'text-blue-500' : 'text-gray-400'}`} size={40} />
+                        {selectedFile ? (
+                          <div>
+                            <p className="text-green-600 font-medium mb-1">✓ {selectedFile.name}</p>
+                            <p className="text-sm text-gray-500">{(selectedFile.size / (1024 * 1024)).toFixed(2)} MB</p>
+                            <p className="text-xs text-gray-400 mt-2">Click to change file</p>
+                          </div>
+                        ) : (
+                          <div>
+                            <p className="text-gray-700 font-medium mb-1">Drop video file here or click to browse</p>
+                            <p className="text-sm text-gray-500">Supports MP4, MOV, AVI and other video formats</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {uploading && (
+                        <div className="space-y-2 mb-4">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">{uploadPhase === 'cloudflare' ? '☁️ Uploading to Cloudflare...' : '📤 Sending to server...'}</span>
+                            <span className="text-blue-600 font-medium">{uploadProgress}%</span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                            <div className="bg-gradient-to-r from-blue-500 to-purple-500 h-2.5 rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+                          </div>
+                          {uploadPhase === 'cloudflare' && <p className="text-xs text-amber-600">⚠️ Large files may take a few minutes — please keep this page open</p>}
+                        </div>
+                      )}
+
+                      {uploadError && <div className="mt-3 text-red-600 text-sm font-medium text-center">{uploadError}</div>}
+
+                      <div className="mt-6 flex justify-end gap-3">
+                        <button onClick={() => { setSmartUploadOpen(false); resetUploadState(); setLookupRegistration(''); setFetchedVehicle(null); }} className="px-5 py-2.5 text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
+                        <button onClick={handleSmartUpload} disabled={!selectedFile || uploading} className="bg-green-600 text-white px-6 py-2.5 rounded-lg font-bold hover:bg-green-700 transition disabled:opacity-50 flex items-center gap-2">
+                          {uploading ? 'Uploading...' : <><FaCloudUploadAlt /> Start Upload</>}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <FaCheck className="text-green-600" size={32} />
+                      </div>
+                      <h3 className="text-xl font-bold text-gray-800">Success!</h3>
+                      <p className="text-gray-500 mb-6">Video uploaded and linked to {fetchedVehicle.registration}</p>
+                      <button onClick={() => { setSmartUploadOpen(false); resetUploadState(); setLookupRegistration(''); setFetchedVehicle(null); }} className="text-blue-600 font-bold hover:underline">Close</button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
+        </div>
       )}
 
-      {/* Direct Upload Header */}
+      {/* Direct Upload Modal */}
       {directUploadOpen && selectedStockItem && (
-         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto pt-20 pb-20">
-             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-scale-up my-auto">
-                 <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex justify-center items-center"><FaVideo size={14}/></div>
-                        <h2 className="text-xl font-bold text-gray-800">Upload Video</h2>
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-5 flex justify-between items-center shrink-0">
+              <h3 className="text-lg font-bold flex items-center gap-2"><FaVideo /> Upload Video</h3>
+              <button onClick={() => { setDirectUploadOpen(false); setSelectedStockItem(null); setSelectedFile(null); setUploadError(''); resetUploadState(); }} className="text-white hover:text-gray-200 transition"><FaTimes size={24} /></button>
+            </div>
+
+            <div className="overflow-y-auto p-6 flex-1">
+              {/* Vehicle Details Card */}
+              <div className="bg-blue-50 rounded-xl p-5 border border-blue-100 mb-6">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-800">{getVehicleData(selectedStockItem).make} {getVehicleData(selectedStockItem).model}</h2>
+                    <p className="text-gray-600">{getVehicleData(selectedStockItem).derivative}</p>
+                  </div>
+                  <span className="bg-yellow-400 text-black px-3 py-1 rounded font-bold text-lg tracking-wider border-2 border-black">
+                    {getVehicleData(selectedStockItem).registration}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div className="flex items-center gap-2"><FaGasPump className="text-gray-400" /> {(selectedStockItem.vehicle?.fuelType || selectedStockItem.fuelType) || 'N/A'}</div>
+                  <div className="flex items-center gap-2"><FaCog className="text-gray-400" /> {(selectedStockItem.vehicle?.transmissionType || selectedStockItem.transmission) || 'N/A'}</div>
+                  <div className="flex items-center gap-2"><FaPalette className="text-gray-400" /> {(selectedStockItem.vehicle?.colour || selectedStockItem.colour) || 'N/A'}</div>
+                  <div className="flex items-center gap-2"><FaCalendar className="text-gray-400" /> {formatDate(selectedStockItem.vehicle?.firstRegistrationDate)}</div>
+                </div>
+              </div>
+
+              {/* Upload Section */}
+              {uploadSuccess ? (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <FaCheck className="text-green-600" size={32} />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-800">Success!</h3>
+                  <p className="text-gray-500 mb-6">Video uploaded for {getVehicleData(selectedStockItem).registration}</p>
+                  <button onClick={() => { setDirectUploadOpen(false); setSelectedStockItem(null); setSelectedFile(null); setUploadError(''); resetUploadState(); }} className="text-blue-600 font-bold hover:underline">Close</button>
+                </div>
+              ) : (
+                <div>
+                  <h4 className="font-bold text-gray-700 mb-3">Upload Video File</h4>
+
+                  {uploading && (
+                    <div className="space-y-2 mb-4">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">{uploadPhase === 'cloudflare' ? '☁️ Uploading to Cloudflare...' : '📤 Sending to server...'}</span>
+                        <span className="text-blue-600 font-medium">{uploadProgress}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                        <div className="bg-gradient-to-r from-blue-500 to-purple-500 h-2.5 rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+                      </div>
+                      {uploadPhase === 'cloudflare' && <p className="text-xs text-amber-600">⚠️ Large files may take a few minutes — please keep this page open</p>}
                     </div>
-                    <button onClick={() => { setDirectUploadOpen(false); resetUploadState(); }} className="text-gray-400 hover:text-gray-700"><FaTimes /></button>
-                 </div>
-                 <div className="p-6">
-                    {uploadSuccess ? (
-                        <div className="py-12 text-center text-green-600">
-                           <FaCheckCircle className="mx-auto text-6xl mb-4" />
-                           <h3 className="text-2xl font-bold text-gray-800">Upload Complete!</h3>
-                        </div>
-                    ) : uploading ? (
-                        <div className="py-12 px-8">
-                            <div className="mb-2 flex justify-between items-center">
-                               <span className="font-medium text-gray-700">{uploadPhase === 'server' ? 'Uploading to server...' : 'Encoding with Cloudflare...'}</span>
-                               <span className="font-bold text-blue-600">{uploadProgress}%</span>
-                            </div>
-                            <div className="w-full bg-gray-100 rounded-full h-3 mb-6"><div className="bg-blue-600 h-3 rounded-full transition-all duration-300" style={{width: `${uploadProgress}%`}}/></div>
-                        </div>
+                  )}
+
+                  <div
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all mb-4 ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'}`}
+                  >
+                    <input ref={fileInputRef} type="file" accept="video/*" onChange={handleFileSelect} className="hidden" />
+                    <FaCloudUploadAlt className={`mx-auto mb-3 ${isDragging ? 'text-blue-500' : 'text-gray-400'}`} size={40} />
+                    {selectedFile ? (
+                      <div>
+                        <p className="text-green-600 font-medium mb-1">✓ {selectedFile.name}</p>
+                        <p className="text-sm text-gray-500">{(selectedFile.size / (1024 * 1024)).toFixed(2)} MB</p>
+                        <p className="text-xs text-gray-400 mt-2">Click to change file</p>
+                      </div>
                     ) : (
-                        <div className="space-y-6">
-                            <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                                <p className="text-sm font-semibold text-gray-800 mb-1">Automating for:</p>
-                                <p className="text-lg font-bold text-blue-600">{getVehicleData(selectedStockItem).make} {getVehicleData(selectedStockItem).model} <span className="text-gray-500 text-base font-normal">({getVehicleData(selectedStockItem).registration})</span></p>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">Upload Video File</label>
-                                <div 
-                                   onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                                   onDragLeave={(e) => { e.preventDefault(); setIsDragging(false); }}
-                                   onDrop={(e) => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files[0]; if(f && f.type.startsWith('video/')) setSelectedFile(f); else showToast('Invalid video file', 'error'); }}
-                                   className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:bg-gray-50'}`}
-                                >
-                                    <input type="file" ref={fileInputRef} accept="video/mp4,video/quicktime,video/*" onChange={handleFileSelect} className="hidden" />
-                                    <button onClick={() => fileInputRef.current?.click()} className="px-5 py-2.5 bg-white border border-gray-300 rounded-lg font-medium hover:bg-gray-50 shadow-sm">Browse Files</button>
-                                </div>
-                                {selectedFile && <div className="mt-4 p-3 bg-blue-50 border border-blue-100 rounded-lg flex justify-between items-center"><p className="text-sm font-semibold truncate">{selectedFile.name}</p><button onClick={()=>setSelectedFile(null)} className="text-red-500"><FaTimes/></button></div>}
-                            </div>
-                            <div className="pt-4 border-t border-gray-100 flex justify-end gap-3"><button onClick={() => { setDirectUploadOpen(false); resetUploadState(); }} className="px-5 py-2.5 text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button><button onClick={handleDirectUpload} disabled={!selectedFile} className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-bold disabled:opacity-50">Upload</button></div>
-                        </div>
+                      <div>
+                        <p className="text-gray-700 font-medium mb-1">Drop video file here or click to browse</p>
+                        <p className="text-sm text-gray-500">Supports MP4, MOV, AVI and other video formats</p>
+                      </div>
                     )}
-                 </div>
-             </div>
-         </div>
+                  </div>
+
+                  {uploadError && <div className="mt-3 text-red-600 text-sm font-medium text-center">{uploadError}</div>}
+
+                  <div className="mt-6 flex justify-end gap-3">
+                    <button onClick={() => { setDirectUploadOpen(false); setSelectedStockItem(null); setSelectedFile(null); setUploadError(''); resetUploadState(); }} className="px-5 py-2.5 text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
+                    <button onClick={handleDirectUpload} disabled={!selectedFile || uploading} className="bg-green-600 text-white px-6 py-2.5 rounded-lg font-bold hover:bg-green-700 transition disabled:opacity-50 flex items-center gap-2">
+                      {uploading ? 'Uploading...' : <><FaCloudUploadAlt /> Start Upload</>}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Reserve Link Modal */}

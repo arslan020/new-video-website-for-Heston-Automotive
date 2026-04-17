@@ -24,10 +24,7 @@ export async function POST(req: NextRequest) {
 
     const magicLink = await MagicLink.create({ token, video: videoId, createdBy: user._id, expiresAt });
 
-    const frontendUrl =
-      process.env.NODE_ENV === 'production'
-        ? 'https://video.hestonautomotive.com'
-        : 'http://localhost:3000';
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
 
     return Response.json(
       { token: magicLink.token, expiresAt: magicLink.expiresAt, url: `${frontendUrl}/watch/${magicLink.token}` },
