@@ -7,7 +7,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import { useRouter } from 'next/navigation';
 import {
     FaUser, FaEnvelope, FaPhone, FaShieldAlt, FaEdit, FaLock,
-    FaTimes, FaSignOutAlt, FaCheckCircle, FaCog
+    FaTimes, FaSignOutAlt, FaCheckCircle, FaCog, FaUserShield
 } from 'react-icons/fa';
 
 export default function StaffSettingsPage() {
@@ -54,7 +54,7 @@ function StaffSettingsContent() {
                 currentPassword: formData.currentPassword
             };
             if (formData.username) updateData.username = formData.username;
-            if (formData.newPassword) updateData.password = formData.newPassword;
+            if (formData.newPassword) updateData.newPassword = formData.newPassword;
 
             const res = await fetch('/api/auth/profile', {
                 method: 'PUT',
@@ -119,6 +119,19 @@ function StaffSettingsContent() {
                             <h3 className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-4">Account Status</h3>
 
                             <div className="space-y-3 sm:space-y-4">
+                                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                                        <div className={`w-8 h-8 flex-shrink-0 rounded-full flex items-center justify-center ${user?.isTwoFactorEnabled ? 'bg-green-100 text-green-600' : 'bg-gray-200 text-gray-500'}`}>
+                                            <FaShieldAlt size={14} />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-sm font-semibold text-gray-700 truncate">2-Factor Auth</p>
+                                            <p className="text-xs text-gray-500">{user?.isTwoFactorEnabled ? 'Active' : 'Inactive'}</p>
+                                        </div>
+                                    </div>
+                                    <div className="text-xs text-gray-400 italic hidden sm:block flex-shrink-0 ml-2">Admin</div>
+                                </div>
+
                                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                                     <div className="flex items-center gap-2 sm:gap-3">
                                         <div className="w-8 h-8 flex-shrink-0 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">

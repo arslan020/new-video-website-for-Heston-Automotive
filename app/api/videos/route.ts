@@ -4,10 +4,12 @@ import Video from '@/models/Video';
 import AuditLog from '@/models/AuditLog';
 import { getUserFromRequest, unauthorizedResponse } from '@/lib/auth';
 import { uploadToCloudflareStream } from '@/lib/cloudflareStream';
-import { writeFile, mkdir, unlink } from 'fs/promises';
-import { existsSync } from 'fs';
+import { mkdir, unlink } from 'fs/promises';
+import { existsSync, createWriteStream } from 'fs';
 import path from 'path';
 import os from 'os';
+import Busboy from 'busboy';
+import { Readable } from 'stream';
 
 // In-memory SSE progress store
 export const progressClients = new Map<string, { controller: ReadableStreamDefaultController; heartbeat: NodeJS.Timeout }>();
@@ -106,23 +108,55 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // File upload (multipart)
+  // File upload (multipart) — stream to disk via busboy (no memory buffering, 3GB limit)
   try {
     await connectDB();
-    const formData = await req.formData();
-    const file = formData.get('video') as File | null;
-
-    if (!file) {
-      return Response.json({ message: 'No video file provided' }, { status: 400 });
-    }
 
     const jobId = `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
     const uploadsDir = path.join(os.tmpdir(), 'video-uploads');
     if (!existsSync(uploadsDir)) await mkdir(uploadsDir, { recursive: true });
 
-    const tempPath = path.join(uploadsDir, `${jobId}-${file.name}`);
-    const buffer = Buffer.from(await file.arrayBuffer());
-    await writeFile(tempPath, buffer);
+    // Parse multipart form with busboy, streaming file straight to disk
+    const fields: Record<string, string> = {};
+    let tempPath = '';
+    let originalName = '';
+
+    await new Promise<void>((resolve, reject) => {
+      const busboy = Busboy({
+        headers: Object.fromEntries(req.headers),
+        limits: { fileSize: 3 * 1024 * 1024 * 1024 }, // 3 GB
+      });
+
+      busboy.on('field', (name: string, value: string) => { fields[name] = value; });
+
+      busboy.on('file', (_field: string, fileStream: NodeJS.ReadableStream, info: { filename: string }) => {
+        originalName = info.filename;
+        const safeName = originalName.replace(/[^a-zA-Z0-9._-]/g, '_');
+        tempPath = path.join(uploadsDir, `${jobId}-${safeName}`);
+        const writeStream = createWriteStream(tempPath);
+        fileStream.pipe(writeStream);
+        writeStream.on('finish', () => {});
+        writeStream.on('error', reject);
+        fileStream.on('error', reject);
+      });
+
+      busboy.on('finish', resolve);
+      busboy.on('error', reject);
+
+      // Pipe Web ReadableStream → Node.js Readable → busboy
+      if (req.body) {
+        Readable.fromWeb(req.body as import('stream/web').ReadableStream).pipe(busboy);
+      } else {
+        reject(new Error('No request body'));
+      }
+    });
+
+    if (!tempPath || !originalName) {
+      return Response.json({ message: 'No video file provided' }, { status: 400 });
+    }
+
+    // Respond immediately with jobId so frontend can open SSE
+    const responseJobId = jobId;
 
     // Run background upload
     (async () => {
@@ -130,9 +164,9 @@ export async function POST(req: NextRequest) {
         await new Promise((r) => setTimeout(r, 500));
 
         const cloudflareVideo = await uploadToCloudflareStream(tempPath, {
-          title: (formData.get('title') as string) || file.name,
+          title: fields.title || originalName,
           onProgress: (percentage) => {
-            const client = progressClients.get(jobId);
+            const client = progressClients.get(responseJobId);
             if (client) {
               try {
                 client.controller.enqueue(`event: progress\ndata: ${JSON.stringify({ percent: percentage })}\n\n`);
@@ -146,12 +180,14 @@ export async function POST(req: NextRequest) {
           videoUrl: cloudflareVideo.videoUrl,
           videoSource: 'cloudflare',
           cloudflareVideoId: cloudflareVideo.videoId,
-          originalName: file.name,
-          title: (formData.get('title') as string) || file.name,
-          registration: (formData.get('registration') as string) || undefined,
-          make: (formData.get('make') as string) || undefined,
-          model: (formData.get('model') as string) || undefined,
-          mileage: formData.get('mileage') ? Number(formData.get('mileage')) : undefined,
+          originalName,
+          title: fields.title || originalName,
+          registration: fields.registration || undefined,
+          make: fields.make || undefined,
+          model: fields.model || undefined,
+          vehicleDetails: fields.vehicleDetails ? JSON.parse(fields.vehicleDetails) : undefined,
+          mileage: fields.mileage ? Number(fields.mileage) : undefined,
+          reserveCarLink: fields.reserveCarLink || undefined,
           thumbnailUrl: cloudflareVideo.thumbnail,
         });
 
@@ -165,26 +201,26 @@ export async function POST(req: NextRequest) {
           metadata: { registration: video.registration },
         });
 
-        const client = progressClients.get(jobId);
+        const client = progressClients.get(responseJobId);
         if (client) {
           try { client.controller.enqueue(`event: done\ndata: {}\n\n`); client.controller.close(); } catch {}
           clearInterval(client.heartbeat);
-          progressClients.delete(jobId);
+          progressClients.delete(responseJobId);
         } else {
-          completedJobs.set(jobId, { done: true });
-          setTimeout(() => completedJobs.delete(jobId), 60000);
+          completedJobs.set(responseJobId, { done: true });
+          setTimeout(() => completedJobs.delete(responseJobId), 60000);
         }
       } catch (bgErr: unknown) {
         try { await unlink(tempPath); } catch {}
         const msg = bgErr instanceof Error ? bgErr.message : 'Upload failed';
-        const client = progressClients.get(jobId);
+        const client = progressClients.get(responseJobId);
         if (client) {
           try { client.controller.enqueue(`event: error\ndata: ${JSON.stringify({ message: msg })}\n\n`); client.controller.close(); } catch {}
           clearInterval(client.heartbeat);
-          progressClients.delete(jobId);
+          progressClients.delete(responseJobId);
         } else {
-          completedJobs.set(jobId, { error: true, message: msg });
-          setTimeout(() => completedJobs.delete(jobId), 60000);
+          completedJobs.set(responseJobId, { error: true, message: msg });
+          setTimeout(() => completedJobs.delete(responseJobId), 60000);
         }
       }
     })();
