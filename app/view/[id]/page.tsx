@@ -213,24 +213,25 @@ export default function VideoViewPage() {
                           </div>
 
                           <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100">
-                              <div className="flex items-center gap-3 sm:gap-4 mb-3 sm:mb-4">
-                                  {video.make && (
-                                      <img
-                                          src={`https://raw.githubusercontent.com/filippofilip95/car-logos-dataset/master/logos/optimized/${video.make.toLowerCase().replace(/\s+/g, '-')}.png`}
-                                          alt={video.make}
-                                          className="w-14 h-14 sm:w-20 sm:h-20 object-contain flex-shrink-0"
-                                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                                      />
-                                  )}
-                                  <h2 className="text-base sm:text-xl font-bold text-gray-900 leading-tight">
-                                      {video.make && video.model ? `${video.make} ${video.model}` : video.title || video.originalName || 'Car Video'}
-                                  </h2>
+                              <div className="flex items-center justify-between gap-3 sm:gap-4">
+                                  <div className="flex items-center gap-3 sm:gap-4">
+                                      {video.make && (
+                                          <img
+                                              src={`https://raw.githubusercontent.com/filippofilip95/car-logos-dataset/master/logos/optimized/${video.make.toLowerCase().replace(/\s+/g, '-')}.png`}
+                                              alt={video.make}
+                                              className="w-14 h-14 sm:w-20 sm:h-20 object-contain flex-shrink-0"
+                                              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                          />
+                                      )}
+                                      <h2 className="text-base sm:text-xl font-bold text-gray-900 leading-tight">
+                                          {video.make && video.model ? `${video.make} ${video.model}` : video.title || video.originalName || 'Car Video'}
+                                      </h2>
+                                  </div>
+                                  <div className="text-right flex-shrink-0">
+                                      <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-100 text-blue-800">Official Video</span>
+                                  </div>
                               </div>
-                              <div className="flex items-center flex-wrap gap-2 mb-3 sm:mb-4">
-                                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-100 text-blue-800">Official Video</span>
-                                  {video.createdAt && <span className="text-xs text-gray-500">• {new Date(video.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</span>}
-                              </div>
-                              <div className="flex items-center gap-3 pt-3 sm:pt-4 border-t border-gray-50">
+                              <div className="flex items-center gap-3 pt-3 sm:pt-4 mt-3 sm:mt-4 border-t border-gray-100">
                                   <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-50 rounded-full flex items-center justify-center overflow-hidden p-1.5 sm:p-2 flex-shrink-0"><img src="/business-logo.png" alt="Heston Automotive" className="w-full h-full object-contain" /></div>
                                   <div><p className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Sales Executive</p><p className="text-sm font-bold text-gray-800">{refName ? decodeURIComponent(refName) : 'Heston Automotive'}</p></div>
                               </div>

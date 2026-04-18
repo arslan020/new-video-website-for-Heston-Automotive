@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useAuth } from '@/context/AuthContext';
-import { FaCloudUploadAlt, FaVideo, FaLink, FaCar, FaEye, FaClock, FaChartLine, FaTimes, FaArrowRight, FaFire, FaTrophy, FaCalendarAlt, FaPlay, FaUser } from 'react-icons/fa';
+import { FaVideo, FaLink, FaCar, FaEye, FaClock, FaChartLine, FaTimes, FaArrowRight, FaFire, FaTrophy, FaCalendarAlt, FaPlay, FaUser } from 'react-icons/fa';
 import { useToast } from '@/components/ToastProvider';
 
 interface VideoView {
@@ -197,7 +197,7 @@ const StaffDashboard = () => {
         })
         .reduce((sum, v) => sum + (v.viewCount || 0), 0);
 
-    const VideoRow = ({ video, showRank, rank, showDate }: { video: Video; showRank?: boolean; rank?: number; showDate?: boolean }) => {
+    const VideoCard = ({ video, showRank, rank, showDate }: { video: Video; showRank?: boolean; rank?: number; showDate?: boolean }) => {
         const normReg = (video.registration || '').replace(/\s/g, '').toUpperCase();
         const isSold = normReg && stockRegs.size > 0 && !stockRegs.has(normReg);
         let displayName = video.title || video.originalName || 'Untitled Video';
@@ -205,65 +205,73 @@ const StaffDashboard = () => {
             const regPattern = new RegExp(`\\s*-\\s*${video.registration}`, 'i');
             displayName = displayName.replace(regPattern, '');
         }
+        const thumbSrc = video.thumbnailUrl ||
+            (video.videoSource === 'cloudflare' && video.cloudflareVideoId
+                ? `https://videodelivery.net/${video.cloudflareVideoId}/thumbnails/thumbnail.jpg?time=1s&height=200`
+                : video.youtubeVideoId
+                    ? `https://img.youtube.com/vi/${video.youtubeVideoId}/mqdefault.jpg`
+                    : null);
+
         return (
-            <tr className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => router.push(`/staff/videos?videoId=${video._id}`)}>
-                <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                        {showRank && (
-                            <span className={`w-5 text-center text-xs font-bold ${rank === 1 ? 'text-yellow-500' : rank === 2 ? 'text-gray-400' : rank === 3 ? 'text-amber-600' : 'text-gray-300'}`}>
-                                {rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank}
+            <div
+                className="group flex items-center gap-3 p-2.5 rounded-xl border border-gray-100 hover:border-gray-200 hover:bg-gray-50 transition-all cursor-pointer"
+                onClick={() => router.push(`/staff/videos?videoId=${video._id}`)}
+            >
+                {/* Rank */}
+                {showRank && rank && (
+                    <span className="flex-shrink-0 w-5 text-center text-sm">
+                        {rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : <span className="text-xs font-bold text-gray-400">{rank}</span>}
+                    </span>
+                )}
+
+                {/* Thumbnail */}
+                <div
+                    className="relative w-20 h-14 flex-shrink-0 rounded-lg bg-gray-900 overflow-hidden"
+                    onClick={(e) => { e.stopPropagation(); setSelectedVideo(video); }}
+                >
+                    {thumbSrc ? (
+                        <img
+                            src={thumbSrc}
+                            alt={displayName}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            onError={(e) => { (e.target as HTMLImageElement).onerror = null; (e.target as HTMLImageElement).src = 'https://via.placeholder.com/120x80?text=Video'; }}
+                        />
+                    ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                            <FaVideo className="text-gray-600" size={16} />
+                        </div>
+                    )}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
+                        <div className="w-6 h-6 rounded-full bg-white/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow">
+                            <FaPlay className="text-gray-800 ml-0.5" size={8} />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-900 text-sm truncate leading-tight">{displayName}</p>
+                    <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                        {video.registration && (
+                            <span className="text-xs font-mono text-blue-600">{video.registration}</span>
+                        )}
+                        {isSold && (
+                            <span className="px-1.5 py-0.5 bg-red-50 text-red-600 text-xs font-semibold rounded border border-red-200">Sold</span>
+                        )}
+                        {showDate && video.createdAt && (
+                            <span className="text-xs text-orange-500 font-medium">
+                                {new Date(video.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                             </span>
                         )}
-                        <div
-                            className="w-14 h-10 bg-gray-900 rounded-lg overflow-hidden flex-shrink-0 border border-gray-200 flex items-center justify-center relative group/thumb cursor-pointer"
-                            onClick={(e) => { e.stopPropagation(); setSelectedVideo(video); }}
-                        >
-                            {video.thumbnailUrl || video.cloudflareVideoId || video.youtubeVideoId ? (
-                                <img
-                                    src={video.thumbnailUrl ||
-                                        (video.videoSource === 'cloudflare'
-                                            ? `https://videodelivery.net/${video.cloudflareVideoId}/thumbnails/thumbnail.jpg?time=1s&height=90`
-                                            : `https://img.youtube.com/vi/${video.youtubeVideoId}/mqdefault.jpg`)}
-                                    alt={video.title}
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => { (e.target as HTMLImageElement).onerror = null; (e.target as HTMLImageElement).src = 'https://via.placeholder.com/120x80?text=Video'; }}
-                                />
-                            ) : (
-                                <FaVideo className="text-gray-600" size={14} />
-                            )}
-                            <div className="absolute inset-0 bg-black/0 group-hover/thumb:bg-black/40 transition-all flex items-center justify-center">
-                                <div className="w-6 h-6 rounded-full bg-white/90 flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity shadow">
-                                    <FaPlay className="text-gray-800 ml-0.5" size={8} />
-                                </div>
-                            </div>
-                        </div>
-                        <div className="min-w-0">
-                            <p className="font-semibold text-gray-900 text-sm truncate max-w-[120px] sm:max-w-[160px] md:max-w-[200px]">{displayName}</p>
-                            <div className="flex items-center gap-1.5 mt-0.5">
-                                {video.registration && (
-                                    <span className="text-xs font-mono text-blue-600">{video.registration}</span>
-                                )}
-                                {isSold && (
-                                    <span className="px-1.5 py-0.5 bg-red-50 text-red-600 text-xs font-semibold rounded border border-red-200">
-                                        Sold
-                                    </span>
-                                )}
-                                {showDate && video.createdAt && (
-                                    <span className="text-xs text-orange-500 font-medium">
-                                        {new Date(video.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                    </span>
-                                )}
-                            </div>
-                        </div>
                     </div>
-                </td>
-                <td className="px-4 py-3 text-right">
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-semibold">
-                        <FaEye size={10} />
-                        {video.viewCount || 0}
-                    </div>
-                </td>
-            </tr>
+                </div>
+
+                {/* Views */}
+                <div className="flex-shrink-0 inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-semibold">
+                    <FaEye size={9} />
+                    {video.viewCount || 0}
+                </div>
+            </div>
         );
     };
 
@@ -288,6 +296,26 @@ const StaffDashboard = () => {
 
                 {/* Stat Cards */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
+                    <div
+                        onClick={() => router.push('/staff/stock')}
+                        className="cursor-pointer p-4 sm:p-5 bg-green-500 rounded-2xl shadow-lg shadow-green-500/30 text-white transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-green-500/40"
+                    >
+                        <div className="flex items-start justify-between gap-3">
+                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/20 flex items-center justify-center border border-white/10">
+                                <FaCar className="text-white" size={15} />
+                            </div>
+                            <FaChartLine size={14} className="text-white/60 mt-1" />
+                        </div>
+                        <div className="mt-3 sm:mt-4">
+                            <div className="text-2xl sm:text-3xl font-bold leading-tight tracking-tight">{stock.length}</div>
+                            <div className="mt-1 text-xs font-medium text-green-100">Cars in Stock</div>
+                        </div>
+                        <div className="mt-2 sm:mt-3 flex items-center gap-1 text-green-100 text-xs">
+                            <span>View stock</span>
+                            <FaArrowRight size={9} />
+                        </div>
+                    </div>
+
                     <div
                         onClick={() => router.push('/staff/videos')}
                         className="cursor-pointer p-4 sm:p-5 bg-blue-500 rounded-2xl shadow-lg shadow-blue-500/30 text-white transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-500/40"
@@ -330,7 +358,7 @@ const StaffDashboard = () => {
 
                     <div
                         onClick={() => router.push('/staff/videos')}
-                        className="cursor-pointer p-4 sm:p-5 bg-green-500 rounded-2xl shadow-lg shadow-green-500/30 text-white transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-green-500/40"
+                        className="cursor-pointer p-4 sm:p-5 bg-orange-500 rounded-2xl shadow-lg shadow-orange-500/30 text-white transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-orange-500/40"
                     >
                         <div className="flex items-start justify-between gap-3">
                             <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/20 flex items-center justify-center border border-white/10">
@@ -340,31 +368,11 @@ const StaffDashboard = () => {
                         </div>
                         <div className="mt-3 sm:mt-4">
                             <div className="text-2xl sm:text-3xl font-bold leading-tight tracking-tight">{videosThisWeek}</div>
-                            <div className="mt-1 text-xs font-medium text-green-100">This Week</div>
-                        </div>
-                        <div className="mt-2 sm:mt-3 flex items-center gap-1 text-green-100 text-xs">
-                            <span className="hidden sm:inline">Recent uploads</span>
-                            <span className="sm:hidden">Uploads</span>
-                            <FaArrowRight size={9} />
-                        </div>
-                    </div>
-
-                    <div
-                        onClick={() => router.push('/staff/stock')}
-                        className="cursor-pointer p-4 sm:p-5 bg-orange-500 rounded-2xl shadow-lg shadow-orange-500/30 text-white transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-orange-500/40"
-                    >
-                        <div className="flex items-start justify-between gap-3">
-                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/20 flex items-center justify-center border border-white/10">
-                                <FaCar className="text-white" size={15} />
-                            </div>
-                            <FaChartLine size={14} className="text-white/60 mt-1" />
-                        </div>
-                        <div className="mt-3 sm:mt-4">
-                            <div className="text-2xl sm:text-3xl font-bold leading-tight tracking-tight">{stock.length}</div>
-                            <div className="mt-1 text-xs font-medium text-orange-100">Cars in Stock</div>
+                            <div className="mt-1 text-xs font-medium text-orange-100">This Week</div>
                         </div>
                         <div className="mt-2 sm:mt-3 flex items-center gap-1 text-orange-100 text-xs">
-                            <span>View stock</span>
+                            <span className="hidden sm:inline">Recent uploads</span>
+                            <span className="sm:hidden">Uploads</span>
                             <FaArrowRight size={9} />
                         </div>
                     </div>
@@ -372,157 +380,113 @@ const StaffDashboard = () => {
 
                 {/* Video Tables */}
                 {loadingVideos ? (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {[0, 1].map(i => (
-                            <div key={i} className="bg-white rounded-xl border border-gray-200 overflow-hidden animate-pulse">
-                                <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {[0, 1, 2].map(i => (
+                            <div key={i} className="bg-white rounded-2xl border border-gray-200 overflow-hidden animate-pulse">
+                                <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 flex justify-between">
                                     <div className="h-3 w-32 bg-gray-200 rounded"></div>
+                                    <div className="h-3 w-12 bg-gray-100 rounded"></div>
                                 </div>
-                                {[0, 1, 2, 3, 4].map(j => (
-                                    <div key={j} className="flex items-center gap-3 px-4 py-3 border-b border-gray-50">
-                                        <div className="w-14 h-10 bg-gray-200 rounded-lg flex-shrink-0"></div>
-                                        <div className="flex-1 space-y-1.5">
-                                            <div className="h-3 w-40 bg-gray-200 rounded"></div>
-                                            <div className="h-2.5 w-20 bg-gray-100 rounded"></div>
+                                <div className="p-3 grid grid-cols-2 gap-2">
+                                    {[0, 1, 2, 3].map(j => (
+                                        <div key={j} className="rounded-xl overflow-hidden border border-gray-100">
+                                            <div className="aspect-video bg-gray-200"></div>
+                                            <div className="p-2 space-y-1">
+                                                <div className="h-2.5 w-3/4 bg-gray-200 rounded"></div>
+                                                <div className="h-2 w-1/2 bg-gray-100 rounded"></div>
+                                            </div>
                                         </div>
-                                        <div className="h-5 w-10 bg-gray-100 rounded-full"></div>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
                             </div>
                         ))}
                     </div>
                 ) : videos.length > 0 && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 items-stretch">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
+
                         {/* Recent Uploads */}
-                        <div className="flex flex-col">
-                            <div className="flex items-center justify-between mb-3">
+                        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col" style={{ maxHeight: '520px' }}>
+                            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
                                 <div>
-                                    <h2 className="text-base font-semibold text-gray-900 tracking-tight">Recent Uploads</h2>
-                                    <p className="text-xs text-gray-500 mt-0.5">Uploaded videos</p>
+                                    <h2 className="text-sm font-semibold text-gray-900 tracking-tight">Recent Uploads</h2>
+                                    <p className="text-xs text-gray-400 mt-0.5">Uploaded videos</p>
                                 </div>
                                 <button onClick={() => router.push('/staff/videos')} className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
                                     View all <FaArrowRight size={9} />
                                 </button>
                             </div>
-                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex-1 flex flex-col">
-                                <table className="w-full text-left">
-                                    <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-semibold border-b border-gray-100 sticky top-0">
-                                        <tr>
-                                            <th className="px-4 py-3">Video</th>
-                                            <th className="px-4 py-3 text-right">Views</th>
-                                        </tr>
-                                    </thead>
-                                </table>
-                                <div className="overflow-y-auto max-h-96">
-                                    <table className="w-full text-left">
-                                        <tbody className="divide-y divide-gray-50">
-                                            {recentVideos.map((video) => (
-                                                <VideoRow key={video._id} video={video} showRank={false} />
-                                            ))}
-                                        </tbody>
-                                    </table>
+                            <div className="overflow-y-auto flex-1 p-3">
+                                <div className="flex flex-col gap-2">
+                                    {recentVideos.slice(0, 20).map((video) => (
+                                        <VideoCard key={video._id} video={video} />
+                                    ))}
                                 </div>
                             </div>
                         </div>
 
                         {/* Top Performing */}
-                        <div className="flex flex-col">
-                            <div className="flex items-center justify-between mb-3">
+                        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col" style={{ maxHeight: '520px' }}>
+                            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
                                 <div>
-                                    <h2 className="text-base font-semibold text-gray-900 tracking-tight flex items-center gap-2">
-                                        <FaTrophy className="text-yellow-500" size={15} />
+                                    <h2 className="text-sm font-semibold text-gray-900 tracking-tight flex items-center gap-1.5">
+                                        <FaTrophy className="text-yellow-500" size={13} />
                                         Top Performing
                                     </h2>
-                                    <p className="text-xs text-gray-500 mt-0.5">Most viewed videos</p>
+                                    <p className="text-xs text-gray-400 mt-0.5">Most viewed videos</p>
                                 </div>
                                 <button onClick={() => router.push('/staff/views')} className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
                                     Views <FaArrowRight size={9} />
                                 </button>
                             </div>
-                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex-1 flex flex-col">
-                                <table className="w-full text-left">
-                                    <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-semibold border-b border-gray-100">
-                                        <tr>
-                                            <th className="px-4 py-3">Video</th>
-                                            <th className="px-4 py-3 text-right">Views</th>
-                                        </tr>
-                                    </thead>
-                                </table>
-                                <div className="overflow-y-auto max-h-96">
-                                    <table className="w-full text-left">
-                                        <tbody className="divide-y divide-gray-50">
-                                            {topVideos.map((video, idx) => (
-                                                <VideoRow key={video._id} video={video} showRank={true} rank={idx + 1} />
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
+                            <div className="overflow-y-auto flex-1 p-3">
+                                {topVideos.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center h-full py-10 text-center text-gray-400">
+                                        <FaTrophy size={22} className="mb-2 text-gray-300" />
+                                        <p className="text-sm">No data yet</p>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col gap-2">
+                                        {topVideos.slice(0, 20).map((video, idx) => (
+                                            <VideoCard key={video._id} video={video} showRank rank={idx + 1} />
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </div>
 
                         {/* Aged Uploads */}
-                        <div className="flex flex-col">
-                            <div className="flex items-center justify-between mb-3">
+                        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col" style={{ maxHeight: '520px' }}>
+                            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
                                 <div>
-                                    <h2 className="text-base font-semibold text-gray-900 tracking-tight flex items-center gap-2">
-                                        <FaClock className="text-orange-400" size={14} />
+                                    <h2 className="text-sm font-semibold text-gray-900 tracking-tight flex items-center gap-1.5">
+                                        <FaClock className="text-orange-400" size={13} />
                                         Aged Uploads
                                     </h2>
-                                    <p className="text-xs text-gray-500 mt-0.5">In stock with views</p>
+                                    <p className="text-xs text-gray-400 mt-0.5">In stock with views</p>
                                 </div>
                                 <button onClick={() => router.push('/staff/videos')} className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
                                     View all <FaArrowRight size={9} />
                                 </button>
                             </div>
-                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex-1">
+                            <div className="overflow-y-auto flex-1 p-3">
                                 {agedVideos.length === 0 ? (
                                     <div className="flex flex-col items-center justify-center h-full py-10 text-center text-gray-400">
                                         <FaClock size={22} className="mb-2 text-gray-300" />
                                         <p className="text-sm">No aged videos with views</p>
                                     </div>
                                 ) : (
-                                    <>
-                                        <table className="w-full text-left">
-                                            <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-semibold border-b border-gray-100">
-                                                <tr>
-                                                    <th className="px-4 py-3">Video</th>
-                                                    <th className="px-4 py-3 text-right">Views</th>
-                                                </tr>
-                                            </thead>
-                                        </table>
-                                        <div className="overflow-y-auto max-h-96">
-                                            <table className="w-full text-left">
-                                                <tbody className="divide-y divide-gray-50">
-                                                    {agedVideos.map((video) => (
-                                                        <VideoRow key={video._id} video={video} showRank={false} showDate={true} />
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </>
+                                    <div className="flex flex-col gap-2">
+                                        {agedVideos.slice(0, 20).map((video) => (
+                                            <VideoCard key={video._id} video={video} showDate />
+                                        ))}
+                                    </div>
                                 )}
                             </div>
                         </div>
+
                     </div>
                 )}
 
-                {/* Empty state */}
-                {videos.length === 0 && (
-                    <div className="flex flex-col items-center justify-center py-20 text-center">
-                        <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center mb-4 border border-blue-100">
-                            <FaVideo className="text-blue-400" size={24} />
-                        </div>
-                        <h3 className="text-lg font-semibold text-gray-800 mb-1">No videos yet</h3>
-                        <p className="text-sm text-gray-500 mb-5">Upload your first vehicle video to get started.</p>
-                        <button
-                            onClick={() => router.push('/staff/videos')}
-                            className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl shadow-sm hover:bg-blue-700 transition"
-                        >
-                            <FaCloudUploadAlt size={15} />
-                            Upload Video
-                        </button>
-                    </div>
-                )}
             </div>
 
             {/* Video Preview Modal */}

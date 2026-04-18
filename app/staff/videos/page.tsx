@@ -357,6 +357,43 @@ function MyVideosContent() {
   const totalPages = Math.ceil(filteredVideos.length / ITEMS_PER_PAGE);
   const paginatedVideos = filteredVideos.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
+  const carBrandLogoMap: Record<string, string> = {
+    'audi': 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/92/Audi-Logo_2016.svg/320px-Audi-Logo_2016.svg.png',
+    'bmw': 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/BMW.svg/200px-BMW.svg.png',
+    'mercedes-benz': 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/90/Mercedes-Logo.svg/200px-Mercedes-Logo.svg.png',
+    'mercedes': 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/90/Mercedes-Logo.svg/200px-Mercedes-Logo.svg.png',
+    'volkswagen': 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/Volkswagen_logo_2019.svg/200px-Volkswagen_logo_2019.svg.png',
+    'ford': 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Ford_logo_flat.svg/320px-Ford_logo_flat.svg.png',
+    'toyota': 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9d/Toyota_carlogo.svg/200px-Toyota_carlogo.svg.png',
+    'honda': 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/38/Honda.svg/200px-Honda.svg.png',
+    'lexus': 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Lexus_division_emblem.svg/320px-Lexus_division_emblem.svg.png',
+    'vauxhall': 'https://upload.wikimedia.org/wikipedia/en/thumb/2/24/Vauxhall_Motors_logo.svg/320px-Vauxhall_Motors_logo.svg.png',
+    'skoda': 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Skoda_auto_logo.svg/320px-Skoda_auto_logo.svg.png',
+    'porsche': 'https://upload.wikimedia.org/wikipedia/de/thumb/9/9b/Porsche_logo.svg/200px-Porsche_logo.svg.png',
+    'volvo': 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Volvo_cars_logo.svg/320px-Volvo_cars_logo.svg.png',
+    'seat': 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/SEAT_logo_2012.svg/320px-SEAT_logo_2012.svg.png',
+    'nissan': 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/81/Nissan-logo.svg/320px-Nissan-logo.svg.png',
+    'hyundai': 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Hyundai_Motor_Company_logo.svg/320px-Hyundai_Motor_Company_logo.svg.png',
+    'kia': 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/13/Kia-logo.svg/320px-Kia-logo.svg.png',
+    'mazda': 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Mazda_logo.svg/320px-Mazda_logo.svg.png',
+    'jaguar': 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Jaguar_logo.svg/320px-Jaguar_logo.svg.png',
+    'land': 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/08/Land_Rover_logo.svg/320px-Land_Rover_logo.svg.png',
+    'range': 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/08/Land_Rover_logo.svg/320px-Land_Rover_logo.svg.png',
+    'mini': 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/MINI_logo.svg/200px-MINI_logo.svg.png',
+    'peugeot': 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Logo_Peugeot.svg/200px-Logo_Peugeot.svg.png',
+    'renault': 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/49/Renault_2021_Text.svg/320px-Renault_2021_Text.svg.png',
+    'fiat': 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Fiat-Logo.svg/200px-Fiat-Logo.svg.png',
+    'tesla': 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/bd/Tesla_Motors.svg/200px-Tesla_Motors.svg.png',
+    'jeep': 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Jeep_logo.svg/320px-Jeep_logo.svg.png',
+    'subaru': 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Subaru_Corporation_logo.svg/320px-Subaru_Corporation_logo.svg.png',
+    'mitsubishi': 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/Mitsubishi_logo.svg/200px-Mitsubishi_logo.svg.png',
+  };
+
+  const getCarBrandLogo = (title: string): string | null => {
+    const make = (title || '').split(' ')[0].toLowerCase().trim();
+    return carBrandLogoMap[make] || null;
+  };
+
   const getThumbnail = (video: Video) => {
     if (video.thumbnailUrl) return video.thumbnailUrl;
     if (video.videoSource === 'cloudflare' && video.cloudflareVideoId) {
@@ -742,40 +779,47 @@ function MyVideosContent() {
 
       {selectedVideo && (
         <div
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-end sm:items-center justify-center sm:p-4 p-0"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-end sm:items-center justify-center sm:p-4 p-0"
           onClick={() => setSelectedVideo(null)}
         >
           <div
-            className="bg-white rounded-t-2xl sm:rounded-2xl sm:max-w-4xl w-full overflow-hidden shadow-2xl animate-fade-in max-h-[92vh] overflow-y-auto"
+            className="bg-white rounded-t-2xl sm:rounded-2xl sm:max-w-3xl w-full overflow-hidden shadow-2xl animate-fade-in max-h-[92vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="bg-gradient-to-r from-gray-900 to-gray-800 p-4 flex items-center justify-between text-white">
-              <div>
-                <h3 className="font-bold text-lg line-clamp-1">
-                  {selectedVideo.title || selectedVideo.originalName || 'Video Preview'}
-                </h3>
-                <p className="text-xs text-gray-400">{selectedVideo.registration || 'No Registration'}</p>
+            {/* Header */}
+            <div className="px-5 py-4 flex items-center justify-between border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                {(() => {
+                  const make = selectedVideo.make || (selectedVideo.title || selectedVideo.originalName || '').split(' ')[0];
+                  const logoUrl = `https://raw.githubusercontent.com/filippofilip95/car-logos-dataset/master/logos/optimized/${make.toLowerCase().replace(/\s+/g, '-')}.png`;
+                  return (
+                    <img
+                      src={logoUrl}
+                      alt={make}
+                      className="w-10 h-10 object-contain flex-shrink-0"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  );
+                })()}
+                <div>
+                  <h3 className="font-bold text-gray-900 text-base line-clamp-1">
+                    {selectedVideo.title || selectedVideo.originalName || 'Video Preview'}
+                  </h3>
+                  {selectedVideo.registration && (
+                    <span className="text-xs font-mono text-blue-600">{selectedVideo.registration}</span>
+                  )}
+                </div>
               </div>
               <button
                 type="button"
                 onClick={() => setSelectedVideo(null)}
-                className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 transition-colors"
               >
-                <FaTimes size={20} />
+                <FaTimes size={16} />
               </button>
             </div>
             <div className="bg-black aspect-video flex items-center justify-center">
-              {selectedVideo.videoSource === 'cloudflare' && selectedVideo.cloudflareVideoId ? (
-                <iframe
-                  src={`https://customer-wovnjl9x8m659779.cloudflarestream.com/${selectedVideo.cloudflareVideoId}/iframe?poster=${encodeURIComponent(
-                    `https://customer-wovnjl9x8m659779.cloudflarestream.com/${selectedVideo.cloudflareVideoId}/thumbnails/thumbnail.jpg?time=0s&height=600`
-                  )}`}
-                  className="w-full h-full border-0"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  title={selectedVideo.title}
-                />
-              ) : selectedVideo.videoSource === 'youtube' || selectedVideo.youtubeVideoId ? (
+              {selectedVideo.videoSource === 'cloudflare' || selectedVideo.videoSource === 'youtube' ? (
                 <iframe
                   src={selectedVideo.videoUrl}
                   className="w-full h-full border-0"
@@ -787,15 +831,16 @@ function MyVideosContent() {
                 <video src={selectedVideo.videoUrl} controls autoPlay className="w-full max-h-[70vh]" />
               )}
             </div>
-            <div className="p-5 bg-white border-t border-gray-100">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-6 text-sm text-gray-500">
-                  <div className="flex items-center gap-2">
-                    <FaEye className="text-blue-500" />
-                    <span className="font-semibold text-gray-700">{selectedVideo.viewCount || 0}</span> views
+            <div className="px-5 py-4 bg-gray-50 border-t border-gray-100">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-4 text-sm text-gray-500">
+                  <div className="flex items-center gap-1.5">
+                    <FaEye className="text-blue-500" size={13} />
+                    <span className="font-semibold text-gray-700">{selectedVideo.viewCount || 0}</span>
+                    <span>views</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <FaCalendar className="text-purple-500" />
+                  <div className="flex items-center gap-1.5">
+                    <FaCalendar className="text-gray-400" size={12} />
                     <span>
                       {new Date(selectedVideo.createdAt).toLocaleDateString('en-GB', {
                         day: 'numeric',
@@ -813,9 +858,9 @@ function MyVideosContent() {
                       setSendModalOpen(true);
                       setSelectedVideo(null);
                     }}
-                    className="flex-1 sm:flex-initial bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors font-medium flex items-center justify-center gap-2"
+                    className="flex items-center gap-2 px-4 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-sm font-semibold rounded-xl transition"
                   >
-                    <FaPaperPlane size={14} /> Send Link
+                    <FaPaperPlane size={13} /> Send Link
                   </button>
                   <button
                     type="button"
@@ -823,9 +868,9 @@ function MyVideosContent() {
                       void copyLink(selectedVideo);
                       setSelectedVideo(null);
                     }}
-                    className="flex-1 sm:flex-initial bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center justify-center gap-2"
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-sm font-semibold rounded-xl transition"
                   >
-                    <FaCopy size={14} /> Copy Link
+                    <FaCopy size={13} /> Copy Link
                   </button>
                 </div>
               </div>

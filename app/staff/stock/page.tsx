@@ -547,8 +547,15 @@ function StockContent() {
                                     <td className="px-5 py-3.5 text-xs text-gray-300 font-medium">{globalIndex}</td>
                                     <td className="px-5 py-3.5">
                                         <div className="flex items-center gap-3">
-                                           <div className={`w-20 h-14 rounded-xl overflow-hidden flex-shrink-0 border ${hasVid ? 'border-emerald-200' : 'border-gray-200'} bg-gray-100 shadow-sm`}>
-                                              {v.image ? <img src={v.image} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-gray-300"><FaCar size={22}/></div>}
+                                           <div className={`relative w-20 h-14 rounded-xl overflow-visible flex-shrink-0 border ${hasVid ? 'border-emerald-200' : 'border-gray-200'} bg-gray-100 shadow-sm group/thumb`}>
+                                              <div className="w-full h-full rounded-xl overflow-hidden">
+                                                {v.image ? <img src={v.image} alt="" className="w-full h-full object-cover transition-transform duration-300 group-hover/thumb:scale-110" /> : <div className="w-full h-full flex items-center justify-center text-gray-300"><FaCar size={22}/></div>}
+                                              </div>
+                                              {v.image && (
+                                                <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 z-50 w-80 h-56 rounded-xl overflow-hidden shadow-2xl border-2 border-white opacity-0 group-hover/thumb:opacity-100 transition-opacity duration-200 pointer-events-none">
+                                                  <img src={v.image} alt="" className="w-full h-full object-cover" />
+                                                </div>
+                                              )}
                                            </div>
                                            <div>
                                                <h3 className="font-semibold text-gray-900 text-sm">{v.make} {v.model}</h3>
