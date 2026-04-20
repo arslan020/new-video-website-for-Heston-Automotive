@@ -439,13 +439,13 @@ const StaffDashboard = () => {
                             </div>
                         </div>
 
-                        {/* Top Performing */}
+                        {/* Sold */}
                         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col" style={{ maxHeight: '520px' }}>
                             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
                                 <div>
                                     <h2 className="text-sm font-semibold text-gray-900 tracking-tight flex items-center gap-1.5">
                                         <FaTrophy className="text-yellow-500" size={13} />
-                                        Top Performing
+                                        Sold
                                     </h2>
                                     <p className="text-xs text-gray-400 mt-0.5">Most viewed videos</p>
                                 </div>
