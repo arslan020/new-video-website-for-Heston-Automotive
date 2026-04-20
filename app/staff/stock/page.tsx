@@ -38,6 +38,8 @@ interface Video {
   _id: string;
   title: string;
   registration?: string;
+  make?: string;
+  model?: string;
   uploadedBy?: { name?: string; username?: string };
 }
 
@@ -463,9 +465,10 @@ function StockContent() {
       });
       if (shareRes.ok) shareId = (await shareRes.json()).shareId;
       
-      const payload: any = { 
-          videoLink: `${window.location.origin}/view/${selectedVideo._id}${shareId ? `?s=${shareId}` : ''}`, 
-          customerName: sendForm.name, customerTitle: sendForm.title 
+      const payload: any = {
+          videoLink: `${window.location.origin}/view/${selectedVideo._id}${shareId ? `?s=${shareId}` : ''}`,
+          customerName: sendForm.name, customerTitle: sendForm.title,
+          vehicleDetails: { make: selectedVideo.make, model: selectedVideo.model, registration: selectedVideo.registration },
       };
       if (sendForm.email) payload.email = sendForm.email;
       if (sendForm.mobile) payload.mobile = sendForm.mobile.replace(/\D/g, '');
