@@ -45,6 +45,7 @@ interface VehicleMetadata {
 const StaffDashboard = () => {
     const router = useRouter();
     const [videos, setVideos] = useState<Video[]>([]);
+    const [allVideos, setAllVideos] = useState<Video[]>([]);
     const [stock, setStock] = useState<StockItem[]>([]);
     const [loadingVideos, setLoadingVideos] = useState(true);
     const { user } = useAuth();
@@ -61,12 +62,18 @@ const StaffDashboard = () => {
     const fetchVideos = useCallback(async () => {
         if (!user?.token) return;
         try {
-            const res = await fetch('/api/videos', { headers: { Authorization: `Bearer ${user?.token}` } });
+            const [res, resAll] = await Promise.all([
+                fetch('/api/videos', { headers: { Authorization: `Bearer ${user?.token}` } }),
+                fetch('/api/videos?all=true', { headers: { Authorization: `Bearer ${user?.token}` } }),
+            ]);
             const data = await res.json();
+            const dataAll = await resAll.json();
             setVideos(Array.isArray(data) ? data : data.videos || []);
+            setAllVideos(Array.isArray(dataAll) ? dataAll : dataAll.videos || []);
         } catch (error) {
             console.error(error);
             setVideos([]);
+            setAllVideos([]);
         } finally {
             setLoadingVideos(false);
         }
@@ -164,20 +171,20 @@ const StaffDashboard = () => {
         stock.map(item => (item.vehicle?.registration || '').replace(/\s/g, '').toUpperCase()).filter(Boolean)
     );
 
-    const topVideos = [...videos]
+    const topVideos = [...allVideos]
         .filter(v => {
             const reg = (v.registration || '').replace(/\s/g, '').toUpperCase();
             return reg && stockRegs.size > 0 && !stockRegs.has(reg);
         })
         .sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0));
 
-    const recentVideos = videos.filter(v => {
+    const recentVideos = allVideos.filter(v => {
         const normReg = (v.registration || '').replace(/\s/g, '').toUpperCase();
         const isSold = normReg && stockRegs.size > 0 && !stockRegs.has(normReg);
         return !isSold;
     });
 
-    const agedVideos = [...videos]
+    const agedVideos = [...allVideos]
         .filter(v => {
             const normReg = (v.registration || '').replace(/\s/g, '').toUpperCase();
             const isSold = normReg && stockRegs.size > 0 && !stockRegs.has(normReg);
@@ -185,14 +192,14 @@ const StaffDashboard = () => {
         })
         .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
-    const videosThisWeek = videos.filter(v => {
+    const videosThisWeek = allVideos.filter(v => {
         const uploadDate = new Date(v.createdAt);
         const weekAgo = new Date();
         weekAgo.setDate(weekAgo.getDate() - 7);
         return uploadDate >= weekAgo;
     }).length;
 
-    const totalViews = videos
+    const totalViews = allVideos
         .filter(v => {
             const reg = (v.registration || '').replace(/\s/g, '').toUpperCase();
             return !reg || stockRegs.size === 0 || stockRegs.has(reg);
@@ -342,7 +349,7 @@ const StaffDashboard = () => {
                             <FaChartLine size={14} className="text-white/60 mt-1" />
                         </div>
                         <div className="mt-3 sm:mt-4">
-                            <div className="text-2xl sm:text-3xl font-bold leading-tight tracking-tight">{videos.length}</div>
+                            <div className="text-2xl sm:text-3xl font-bold leading-tight tracking-tight">{allVideos.filter(v => !v.deletedAt).length}</div>
                             <div className="mt-1 text-xs font-medium text-blue-100">Total Videos</div>
                         </div>
                         <div className="mt-2 sm:mt-3 flex items-center gap-1 text-blue-100 text-xs">
@@ -416,7 +423,7 @@ const StaffDashboard = () => {
                             </div>
                         ))}
                     </div>
-                ) : videos.length > 0 && (
+                ) : allVideos.length > 0 && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
 
                         {/* Recent Uploads */}
@@ -461,7 +468,7 @@ const StaffDashboard = () => {
                                     </div>
                                 ) : (
                                     <div className="flex flex-col gap-2">
-                                        {topVideos.slice(0, 20).map((video, idx) => (
+                                        {topVideos.map((video, idx) => (
                                             <VideoCard key={video._id} video={video} showRank rank={idx + 1} />
                                         ))}
                                     </div>

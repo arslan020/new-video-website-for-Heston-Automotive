@@ -27,7 +27,7 @@ interface Video {
   viewCount: number;
   views: any[];
   createdAt: string;
-  uploadedBy?: { name?: string; username: string };
+  uploadedBy?: { _id?: string; name?: string; username: string };
   durationParams?: { duration?: number };
   deletedAt?: string;
 }
@@ -86,7 +86,7 @@ function MyVideosContent() {
     if (!user?.token) return;
     setLoading(true);
     try {
-      const url = isAdmin ? '/api/videos?all=true' : '/api/videos';
+      const url = '/api/videos?all=true';
       const res = await fetch(url, { headers: { Authorization: `Bearer ${user.token}` } });
       if (res.ok) {
         const data = await res.json();
@@ -620,6 +620,12 @@ function MyVideosContent() {
                                     year: 'numeric',
                                   })}
                                 </span>
+                                {video.uploadedBy && (
+                                  <span className="hidden sm:flex items-center gap-1 text-xs text-purple-500 font-medium">
+                                    <FaUser size={9} />
+                                    {video.uploadedBy.name || video.uploadedBy.username}
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -682,14 +688,16 @@ function MyVideosContent() {
                               >
                                 <FaExternalLinkAlt size={12} />
                               </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDelete(video)}
-                                className="p-1.5 text-red-500 hover:bg-white rounded-md transition-colors"
-                                title="Delete Video"
-                              >
-                                <FaTrash size={12} />
-                              </button>
+                              {(isAdmin || video.uploadedBy?._id === user?._id) && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDelete(video)}
+                                  className="p-1.5 text-red-500 hover:bg-white rounded-md transition-colors"
+                                  title="Delete Video"
+                                >
+                                  <FaTrash size={12} />
+                                </button>
+                              )}
                             </div>
                           )}
                         </td>
