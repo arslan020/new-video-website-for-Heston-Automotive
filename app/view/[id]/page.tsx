@@ -27,6 +27,9 @@ export default function VideoViewPage() {
   const [bookingError, setBookingError] = useState('');
   const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
 
+  // Sub Parts
+  const [playingSubPart, setPlayingSubPart] = useState<any>(null);
+
   // Call Request Modal State
   const [showCallModal, setShowCallModal] = useState(false);
   const [callRequestData, setCallRequestData] = useState({ name: '', phone: '', email: '' });
@@ -237,6 +240,24 @@ export default function VideoViewPage() {
                               </div>
                           </div>
 
+                          {video.subParts && video.subParts.length > 0 && (
+                              <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-gray-100">
+                                  <h3 className="text-sm font-bold text-gray-700 mb-3">Vehicle Walkthroughs</h3>
+                                  <div className="flex flex-wrap gap-2">
+                                      {video.subParts.map((sp: any) => (
+                                          <button
+                                              key={sp._id}
+                                              type="button"
+                                              onClick={() => setPlayingSubPart(sp)}
+                                              className="flex items-center gap-2 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-sm font-medium transition-colors"
+                                          >
+                                              <span>▶</span> {sp.name}
+                                          </button>
+                                      ))}
+                                  </div>
+                              </div>
+                          )}
+
                           <div className="bg-white border border-blue-100 p-4 sm:p-6 rounded-xl shadow-sm">
                               <div className="mb-4 sm:mb-6 text-center">
                                   <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-1">Interested in this vehicle?</h3>
@@ -311,6 +332,25 @@ export default function VideoViewPage() {
                                   <div className="flex gap-2 sm:gap-3 pt-2"><button type="button" onClick={() => setShowBookingModal(false)} className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 text-sm">Cancel</button><button type="submit" disabled={bookingLoading} className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 text-sm">{bookingLoading ? 'Booking...' : 'Confirm Booking'}</button></div>
                               </form>
                           )}
+                      </div>
+                  </div>
+              </div>
+          )}
+
+          {playingSubPart && (
+              <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                  <div className="bg-black rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">
+                      <div className="flex justify-between items-center px-5 py-3 bg-gray-900">
+                          <span className="text-white font-semibold text-sm">▶ {playingSubPart.name}</span>
+                          <button type="button" onClick={() => setPlayingSubPart(null)} className="text-gray-300 hover:text-white text-xl px-2">×</button>
+                      </div>
+                      <div className="aspect-video w-full">
+                          <iframe
+                              src={`https://customer-8bi7472qxin61gj7.cloudflarestream.com/${playingSubPart.cloudflareVideoId}/iframe?autoplay=true`}
+                              allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
+                              allowFullScreen
+                              className="w-full h-full"
+                          />
                       </div>
                   </div>
               </div>

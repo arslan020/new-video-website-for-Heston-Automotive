@@ -8,6 +8,14 @@ export interface IVideoView {
   viewerMobile?: string;
 }
 
+export interface ISubPart {
+  _id: mongoose.Types.ObjectId;
+  name: string;
+  cloudflareVideoId: string;
+  thumbnailUrl?: string;
+  createdAt: Date;
+}
+
 export interface IVideo extends Omit<Document, 'model'> {
   uploadedBy: mongoose.Types.ObjectId;
   videoUrl: string;
@@ -28,6 +36,7 @@ export interface IVideo extends Omit<Document, 'model'> {
   thumbnailUrl?: string;
   deletedAt?: Date;
   views: IVideoView[];
+  subParts: ISubPart[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -52,6 +61,14 @@ const videoSchema = new mongoose.Schema<IVideo>(
     linkExpiresAt: Date,
     thumbnailUrl: { type: String, trim: true },
     deletedAt: { type: Date, default: null },
+    subParts: [
+      {
+        name: { type: String, required: true, trim: true },
+        cloudflareVideoId: { type: String, required: true },
+        thumbnailUrl: String,
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
     views: [
       {
         shareId: { type: mongoose.Schema.Types.ObjectId, ref: 'AuditLog' },
@@ -65,5 +82,8 @@ const videoSchema = new mongoose.Schema<IVideo>(
   { timestamps: true }
 );
 
-const Video: Model<IVideo> = mongoose.models.Video || mongoose.model<IVideo>('Video', videoSchema);
+if (process.env.NODE_ENV !== 'production' && mongoose.models.Video) {
+  delete (mongoose.models as any).Video;
+}
+const Video: Model<IVideo> = (mongoose.models.Video as Model<IVideo>) || mongoose.model<IVideo>('Video', videoSchema);
 export default Video;

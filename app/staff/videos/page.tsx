@@ -8,9 +8,17 @@ import { useToast } from '@/components/ToastProvider';
 import { useSearchParams } from 'next/navigation';
 import {
   FaSearch, FaVideo, FaCopy, FaTrash, FaEye, FaCalendar,
-  FaUser, FaPlay, FaTimes, FaExternalLinkAlt, FaPaperPlane, FaLink
+  FaUser, FaPlay, FaTimes, FaExternalLinkAlt, FaPaperPlane, FaLink, FaPlus, FaSpinner, FaPuzzlePiece
 } from 'react-icons/fa';
 import UKPhoneInput from '@/components/UKPhoneInput';
+import * as tus from 'tus-js-client';
+
+interface SubPart {
+  _id: string;
+  name: string;
+  cloudflareVideoId: string;
+  thumbnailUrl?: string;
+}
 
 interface Video {
   _id: string;
@@ -30,6 +38,7 @@ interface Video {
   uploadedBy?: { _id?: string; name?: string; username: string };
   durationParams?: { duration?: number };
   deletedAt?: string;
+  subParts?: SubPart[];
 }
 
 interface StockItem {
@@ -38,6 +47,37 @@ interface StockItem {
 }
 
 const ITEMS_PER_PAGE = 10;
+
+function SubPartRow({ sp, onPlay, onDelete }: { sp: SubPart; onPlay: () => void; onDelete: () => void }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <div
+      className="flex items-center gap-1"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <button
+        type="button"
+        onClick={onPlay}
+        className="flex items-center gap-1 px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full text-xs font-medium hover:bg-indigo-100 transition-colors max-w-[130px]"
+        title={sp.name}
+      >
+        <FaPlay size={7} className="flex-shrink-0" />
+        <span className="truncate">{sp.name}</span>
+      </button>
+      {hovered && (
+        <button
+          type="button"
+          onClick={onDelete}
+          className="text-red-400 hover:text-red-600 transition-colors flex-shrink-0"
+          title="Delete"
+        >
+          <FaTimes size={9} />
+        </button>
+      )}
+    </div>
+  );
+}
 
 export default function MyVideosPage() {
   return (
@@ -79,6 +119,14 @@ function MyVideosContent() {
   const [reserveLinkVideo, setReserveLinkVideo] = useState<Video | null>(null);
   const [reserveLink, setReserveLink] = useState('');
   const [savingReserveLink, setSavingReserveLink] = useState(false);
+
+  // Sub Parts
+  const [subPartModalVideo, setSubPartModalVideo] = useState<Video | null>(null);
+  const [subPartName, setSubPartName] = useState('');
+  const [subPartFile, setSubPartFile] = useState<File | null>(null);
+  const [subPartUploading, setSubPartUploading] = useState(false);
+  const [subPartUploadProgress, setSubPartUploadProgress] = useState(0);
+  const [playingSubPart, setPlayingSubPart] = useState<SubPart | null>(null);
 
   const isAdmin = user?.role === 'admin';
 
@@ -223,6 +271,78 @@ function MyVideosContent() {
       showToast('Video deleted successfully', 'success');
     } catch (err: any) {
       showToast(err.message, 'error');
+    }
+  };
+
+  const handleAddSubPart = async () => {
+    if (!subPartModalVideo || !subPartName.trim() || !subPartFile) return;
+    const videoId = subPartModalVideo._id;
+    const partName = subPartName.trim();
+    setSubPartUploading(true);
+    setSubPartUploadProgress(0);
+    try {
+      const createRes = await fetch('/api/cloudflare/tus-create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user?.token}` },
+        body: JSON.stringify({ title: subPartName, fileSize: subPartFile.size }),
+      });
+      if (!createRes.ok) throw new Error('Failed to create upload');
+      const { tusUrl, uid } = await createRes.json();
+
+      await new Promise<void>((resolve, reject) => {
+        const upload = new tus.Upload(subPartFile, {
+          uploadUrl: tusUrl,
+          chunkSize: 50 * 1024 * 1024,
+          retryDelays: [0, 3000, 5000, 10000, 20000],
+          onProgress: (uploaded: number, total: number) => {
+            setSubPartUploadProgress(Math.round((uploaded / total) * 100));
+          },
+          onSuccess: () => resolve(),
+          onError: (e: Error) => reject(e),
+        });
+        upload.start();
+      });
+
+      const saveRes = await fetch(`/api/videos/${videoId}/subparts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user?.token}` },
+        body: JSON.stringify({ name: partName, cloudflareVideoId: uid }),
+      });
+      if (!saveRes.ok) throw new Error('Failed to save sub part');
+      const newSubPart: SubPart = await saveRes.json();
+
+      setVideos(prev => prev.map(v =>
+        v._id === videoId
+          ? { ...v, subParts: [...(v.subParts || []), newSubPart] }
+          : v
+      ));
+      setSubPartModalVideo(null);
+      setSubPartName('');
+      setSubPartFile(null);
+      showToast('Sub part added', 'success');
+    } catch (err: any) {
+      showToast(err.message || 'Upload failed', 'error');
+    } finally {
+      setSubPartUploading(false);
+      setSubPartUploadProgress(0);
+    }
+  };
+
+  const handleDeleteSubPart = async (videoId: string, subPartId: string) => {
+    try {
+      await fetch(`/api/videos/${videoId}/subparts`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user?.token}` },
+        body: JSON.stringify({ subPartId }),
+      });
+      setVideos(prev => prev.map(v =>
+        v._id === videoId
+          ? { ...v, subParts: (v.subParts || []).filter(sp => sp._id !== subPartId) }
+          : v
+      ));
+      showToast('Sub part deleted', 'success');
+    } catch {
+      showToast('Failed to delete sub part', 'error');
     }
   };
 
@@ -398,7 +518,7 @@ function MyVideosContent() {
   const getThumbnail = (video: Video) => {
     if (video.thumbnailUrl) return video.thumbnailUrl;
     if (video.videoSource === 'cloudflare' && video.cloudflareVideoId) {
-        return `https://customer-wovnjl9x8m659779.cloudflarestream.com/${video.cloudflareVideoId}/thumbnails/thumbnail.jpg?time=0s&height=300`;
+        return `https://customer-8bi7472qxin61gj7.cloudflarestream.com/${video.cloudflareVideoId}/thumbnails/thumbnail.jpg?time=0s&height=300`;
     }
     return '';
   };
@@ -531,6 +651,7 @@ function MyVideosContent() {
                   <th className="px-3 sm:px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Video</th>
                   <th className="px-3 sm:px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Views</th>
                   <th className="hidden md:table-cell px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Reserve Link</th>
+                  <th className="hidden lg:table-cell px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Sub Parts</th>
                   <th className="px-3 sm:px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider text-right">Actions</th>
                 </tr>
               </thead>
@@ -651,6 +772,27 @@ function MyVideosContent() {
                               {hasReserveLink ? 'Edit Link' : 'Add Link'}
                             </button>
                           )}
+                        </td>
+                        <td className="hidden lg:table-cell px-5 py-3.5">
+                          <div className="flex flex-col gap-1.5">
+                            {(video.subParts || []).map(sp => (
+                              <SubPartRow
+                                key={sp._id}
+                                sp={sp}
+                                onPlay={() => setPlayingSubPart(sp)}
+                                onDelete={() => handleDeleteSubPart(video._id, sp._id)}
+                              />
+                            ))}
+                            {!isDeleted && (
+                              <button
+                                type="button"
+                                onClick={() => { setSubPartModalVideo(video); setSubPartName(''); setSubPartFile(null); }}
+                                className="flex items-center gap-1 px-2 py-0.5 bg-gray-100 text-gray-500 border border-dashed border-gray-300 rounded-full text-xs font-medium hover:bg-gray-200 transition-colors w-fit"
+                              >
+                                <FaPlus size={8} /> Add Part
+                              </button>
+                            )}
+                          </div>
                         </td>
                         <td className="px-3 sm:px-5 py-3.5 text-right">
                           {isDeleted ? (
@@ -970,6 +1112,89 @@ function MyVideosContent() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sub Part Upload Modal */}
+      {subPartModalVideo && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[80] p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-indigo-50">
+              <div>
+                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                  <FaPuzzlePiece className="text-indigo-500" size={16} /> Add Sub Part
+                </h3>
+                <p className="text-xs text-gray-500 mt-0.5">{subPartModalVideo.title}</p>
+              </div>
+              <button type="button" onClick={() => setSubPartModalVideo(null)} className="p-1.5 rounded-lg hover:bg-gray-100">
+                <FaTimes size={14} className="text-gray-400" />
+              </button>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Part Name</label>
+                <input
+                  type="text"
+                  value={subPartName}
+                  onChange={e => setSubPartName(e.target.value)}
+                  placeholder="e.g. Engine, Interior, Boot..."
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Video File</label>
+                <input
+                  type="file"
+                  accept="video/*"
+                  onChange={e => setSubPartFile(e.target.files?.[0] || null)}
+                  className="w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                />
+              </div>
+              {subPartUploading && (
+                <div>
+                  <div className="flex justify-between text-xs text-gray-500 mb-1">
+                    <span>Uploading...</span>
+                    <span>{subPartUploadProgress}%</span>
+                  </div>
+                  <div className="w-full bg-gray-100 rounded-full h-2">
+                    <div className="bg-indigo-500 h-2 rounded-full transition-all" style={{ width: `${subPartUploadProgress}%` }} />
+                  </div>
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={handleAddSubPart}
+                disabled={subPartUploading || !subPartName.trim() || !subPartFile}
+                className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {subPartUploading ? <><FaSpinner className="animate-spin" size={13} /> Uploading...</> : <><FaPlus size={12} /> Upload Sub Part</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sub Part Video Player Modal */}
+      {playingSubPart && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[90] p-4">
+          <div className="bg-black rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">
+            <div className="flex justify-between items-center px-5 py-3 bg-gray-900">
+              <span className="text-white font-semibold text-sm flex items-center gap-2">
+                <FaPuzzlePiece className="text-indigo-400" size={13} /> {playingSubPart.name}
+              </span>
+              <button type="button" onClick={() => setPlayingSubPart(null)} className="p-1.5 rounded-lg hover:bg-gray-700">
+                <FaTimes size={14} className="text-gray-300" />
+              </button>
+            </div>
+            <div className="aspect-video w-full">
+              <iframe
+                src={`https://customer-8bi7472qxin61gj7.cloudflarestream.com/${playingSubPart.cloudflareVideoId}/iframe?autoplay=true`}
+                allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
+                allowFullScreen
+                className="w-full h-full"
+              />
             </div>
           </div>
         </div>
