@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import * as tus from 'tus-js-client';
 import { useAuth } from '@/context/AuthContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -98,7 +99,7 @@ function StockContent() {
   const [isDragging, setIsDragging] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const xhrRef = useRef<XMLHttpRequest | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const pendingUidRef = useRef<string | null>(null);
 
   const formatDate = (dateStr?: string) => {
@@ -224,7 +225,7 @@ function StockContent() {
 
   // Upload Logic
   const resetUploadState = () => {
-      if (xhrRef.current) { xhrRef.current.abort(); xhrRef.current = null; }
+      if (abortControllerRef.current) { abortControllerRef.current.abort(); abortControllerRef.current = null; }
       if (pendingUidRef.current) {
           fetch(`/api/videos/cloudflare/${pendingUidRef.current}`, {
               method: 'DELETE',
@@ -276,34 +277,40 @@ function StockContent() {
   }) => {
       setUploading(true); setUploadProgress(0); setUploadPhase('cloudflare');
       try {
-          // Step 1: get a direct Cloudflare upload URL (tiny request, no file — bypasses Vercel limit)
-          const urlRes = await fetch('/api/cloudflare/direct-upload', {
+          // Step 1: create a TUS upload slot on Cloudflare (server-side auth, returns TUS URL + uid)
+          const urlRes = await fetch('/api/cloudflare/tus-create', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user?.token}` },
-              body: JSON.stringify({ title: meta.title }),
+              body: JSON.stringify({ title: meta.title, fileSize: meta.file.size }),
           });
-          if (!urlRes.ok) throw new Error('Failed to get upload URL');
-          const { uploadURL, uid } = await urlRes.json();
+          if (!urlRes.ok) throw new Error('Failed to create upload slot');
+          const { tusUrl, uid } = await urlRes.json();
           pendingUidRef.current = uid;
 
-          // Step 2: upload file directly from browser to Cloudflare via XHR form POST (bypasses Vercel)
+          // Step 2: upload directly browser → Cloudflare via TUS (resumable, bypasses Vercel)
           await new Promise<void>((resolve, reject) => {
-              const xhr = new XMLHttpRequest();
-              xhrRef.current = xhr;
-              const fd = new FormData();
-              fd.append('file', meta.file);
-              xhr.upload.onprogress = (e) => {
-                  if (e.lengthComputable) setUploadProgress(Math.round((e.loaded / e.total) * 100));
-              };
-              xhr.onload = () => {
-                  xhrRef.current = null;
-                  if (xhr.status >= 200 && xhr.status < 300) resolve();
-                  else reject(new Error(`Cloudflare upload failed (${xhr.status}): ${xhr.responseText}`));
-              };
-              xhr.onerror = () => { xhrRef.current = null; reject(new Error('Network error during upload')); };
-              xhr.onabort = () => { xhrRef.current = null; reject(new Error('Upload cancelled')); };
-              xhr.open('POST', uploadURL);
-              xhr.send(fd);
+              let cancelled = false;
+              const upload = new tus.Upload(meta.file, {
+                  uploadUrl: tusUrl,
+                  chunkSize: 50 * 1024 * 1024, // 50 MB chunks (divisible by 256 KiB, per CF requirement)
+                  retryDelays: [0, 3000, 5000, 10000, 20000],
+                  onProgress(bytesUploaded, bytesTotal) {
+                      setUploadProgress(Math.round((bytesUploaded / bytesTotal) * 100));
+                  },
+                  onSuccess() {
+                      abortControllerRef.current = null;
+                      resolve();
+                  },
+                  onError(err) {
+                      abortControllerRef.current = null;
+                      if (cancelled) reject(new Error('Upload cancelled'));
+                      else reject(err);
+                  },
+              });
+              const ac = new AbortController();
+              abortControllerRef.current = ac;
+              ac.signal.addEventListener('abort', () => { cancelled = true; upload.abort(); });
+              upload.start();
           });
 
           setUploadProgress(100);
