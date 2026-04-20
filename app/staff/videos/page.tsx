@@ -29,6 +29,7 @@ interface Video {
   createdAt: string;
   uploadedBy?: { name?: string; username: string };
   durationParams?: { duration?: number };
+  deletedAt?: string;
 }
 
 interface StockItem {
@@ -411,7 +412,14 @@ function MyVideosContent() {
     return !!(r && stockRegs.size > 0 && !stockRegs.has(r));
   }).length;
 
+  const brandLogoUrl = (make?: string) => {
+    if (!make) return null;
+    const slug = make.toLowerCase().trim().replace(/\s+/g, '-');
+    return `https://raw.githubusercontent.com/filippofilip95/car-logos-dataset/master/logos/optimized/${slug}.png`;
+  };
+
   const thumbSrc = (video: Video) => {
+    if (video.deletedAt) return null;
     if (video.thumbnailUrl) return video.thumbnailUrl;
     if (video.videoSource === 'cloudflare' && video.cloudflareVideoId) {
       return `https://videodelivery.net/${video.cloudflareVideoId}/thumbnails/thumbnail.jpg?time=1s&height=120`;
@@ -533,6 +541,7 @@ function MyVideosContent() {
                     const hasReserveLink = !!vehicleMetadata[normReg]?.reserveLink;
                     const globalIndex = (currentPage - 1) * ITEMS_PER_PAGE + index + 1;
                     const isSold = !!(normReg && stockRegs.size > 0 && !stockRegs.has(normReg));
+                    const isDeleted = !!video.deletedAt || (!video.videoUrl && !video.cloudflareVideoId && !video.youtubeVideoId);
                     let displayName = video.title || video.originalName || 'Untitled Video';
                     if (video.registration) {
                       const regPattern = new RegExp(`\\s*-\\s*${video.registration}`, 'i');
@@ -553,12 +562,12 @@ function MyVideosContent() {
                           <div className="flex items-center gap-2 sm:gap-3">
                             <button
                               type="button"
-                              className="w-16 h-11 sm:w-20 sm:h-14 bg-gray-900 rounded-xl overflow-hidden flex-shrink-0 border border-gray-200 cursor-pointer group/thumb relative flex items-center justify-center shadow-sm"
+                              className={`w-16 h-11 sm:w-20 sm:h-14 rounded-xl overflow-hidden flex-shrink-0 border border-gray-200 cursor-pointer group/thumb relative flex items-center justify-center shadow-sm ${!thumbSrc(video) && brandLogoUrl(video.make) ? 'bg-white' : 'bg-gray-900'}`}
                               onClick={() => setSelectedVideo(video)}
                             >
                               {thumbSrc(video) ? (
                                 <img
-                                  src={thumbSrc(video)}
+                                  src={thumbSrc(video)!}
                                   alt=""
                                   className="w-full h-full object-cover"
                                   onError={(e) => {
@@ -567,14 +576,28 @@ function MyVideosContent() {
                                       'https://via.placeholder.com/160x90?text=Video';
                                   }}
                                 />
+                              ) : brandLogoUrl(video.make) ? (
+                                <img
+                                  src={brandLogoUrl(video.make)!}
+                                  alt={video.make}
+                                  className="w-full h-full object-contain p-1"
+                                  onError={(e) => {
+                                    const el = e.target as HTMLImageElement;
+                                    el.onerror = null;
+                                    el.style.display = 'none';
+                                    el.parentElement!.innerHTML = `<span class="text-xs font-bold text-gray-400 uppercase">${video.make?.slice(0, 3) ?? ''}</span>`;
+                                  }}
+                                />
                               ) : (
                                 <FaVideo className="text-gray-600" size={16} />
                               )}
-                              <div className="absolute inset-0 bg-black/0 group-hover/thumb:bg-black/40 transition-all flex items-center justify-center">
-                                <div className="w-7 h-7 rounded-full bg-white/90 flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity shadow">
-                                  <FaPlay className="text-gray-800 ml-0.5" size={10} />
+                              {!isDeleted && (
+                                <div className="absolute inset-0 bg-black/0 group-hover/thumb:bg-black/40 transition-all flex items-center justify-center">
+                                  <div className="w-7 h-7 rounded-full bg-white/90 flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity shadow">
+                                    <FaPlay className="text-gray-800 ml-0.5" size={10} />
+                                  </div>
                                 </div>
-                              </div>
+                              )}
                             </button>
                             <div className="min-w-0">
                               <h3 className="font-semibold text-gray-900 text-xs sm:text-sm truncate max-w-[130px] sm:max-w-[200px] md:max-w-[220px] leading-tight">{displayName}</h3>
@@ -608,54 +631,67 @@ function MyVideosContent() {
                           </div>
                         </td>
                         <td className="hidden md:table-cell px-5 py-3.5">
-                          <button
-                            type="button"
-                            onClick={() => openReserveLinkModal(video)}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                              hasReserveLink
-                                ? 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm'
-                                : 'bg-white text-gray-500 border border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                            }`}
-                          >
-                            <FaLink size={10} />
-                            {hasReserveLink ? 'Edit Link' : 'Add Link'}
-                          </button>
+                          {!isDeleted && (
+                            <button
+                              type="button"
+                              onClick={() => openReserveLinkModal(video)}
+                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                                hasReserveLink
+                                  ? 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm'
+                                  : 'bg-white text-gray-500 border border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                              }`}
+                            >
+                              <FaLink size={10} />
+                              {hasReserveLink ? 'Edit Link' : 'Add Link'}
+                            </button>
+                          )}
                         </td>
                         <td className="px-3 sm:px-5 py-3.5 text-right">
-                          <div className="inline-flex items-center gap-0.5 bg-gray-100 rounded-lg p-0.5 opacity-60 group-hover:opacity-100 transition-opacity">
-                            <button
-                              type="button"
-                              onClick={() => openSendModal(video)}
-                              className="p-1.5 text-blue-600 hover:bg-white rounded-md transition-colors"
-                              title="Send to Customer"
-                            >
-                              <FaPaperPlane size={12} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => copyLink(video)}
-                              className="p-1.5 text-blue-600 hover:bg-white rounded-md transition-colors"
-                              title="Copy Link"
-                            >
-                              <FaCopy size={12} />
-                            </button>
+                          {isDeleted ? (
                             <button
                               type="button"
                               onClick={() => window.open(`${window.location.origin}/view/${video._id}`, '_blank')}
-                              className="hidden sm:block p-1.5 text-emerald-600 hover:bg-white rounded-md transition-colors"
-                              title="Open Video"
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                              title="View Record"
                             >
-                              <FaExternalLinkAlt size={12} />
+                              <FaExternalLinkAlt size={10} /> View
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDelete(video)}
-                              className="p-1.5 text-red-500 hover:bg-white rounded-md transition-colors"
-                              title="Delete Video"
-                            >
-                              <FaTrash size={12} />
-                            </button>
-                          </div>
+                          ) : (
+                            <div className="inline-flex items-center gap-0.5 bg-gray-100 rounded-lg p-0.5 opacity-60 group-hover:opacity-100 transition-opacity">
+                              <button
+                                type="button"
+                                onClick={() => openSendModal(video)}
+                                className="p-1.5 text-blue-600 hover:bg-white rounded-md transition-colors"
+                                title="Send to Customer"
+                              >
+                                <FaPaperPlane size={12} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => copyLink(video)}
+                                className="p-1.5 text-blue-600 hover:bg-white rounded-md transition-colors"
+                                title="Copy Link"
+                              >
+                                <FaCopy size={12} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => window.open(`${window.location.origin}/view/${video._id}`, '_blank')}
+                                className="hidden sm:block p-1.5 text-emerald-600 hover:bg-white rounded-md transition-colors"
+                                title="Open Video"
+                              >
+                                <FaExternalLinkAlt size={12} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(video)}
+                                className="p-1.5 text-red-500 hover:bg-white rounded-md transition-colors"
+                                title="Delete Video"
+                              >
+                                <FaTrash size={12} />
+                              </button>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     );

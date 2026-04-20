@@ -27,6 +27,8 @@ interface Video {
     viewCount?: number;
     createdAt: string;
     views?: VideoView[];
+    make?: string;
+    deletedAt?: string;
 }
 
 interface StockItem {
@@ -205,12 +207,16 @@ const StaffDashboard = () => {
             const regPattern = new RegExp(`\\s*-\\s*${video.registration}`, 'i');
             displayName = displayName.replace(regPattern, '');
         }
-        const thumbSrc = video.thumbnailUrl ||
+        const isDeleted = !!video.deletedAt || (!video.videoUrl && !video.cloudflareVideoId && !video.youtubeVideoId);
+        const brandLogoUrl = video.make
+            ? `https://raw.githubusercontent.com/filippofilip95/car-logos-dataset/master/logos/optimized/${video.make.toLowerCase().trim().replace(/\s+/g, '-')}.png`
+            : null;
+        const thumbSrc = isDeleted ? null : (video.thumbnailUrl ||
             (video.videoSource === 'cloudflare' && video.cloudflareVideoId
                 ? `https://videodelivery.net/${video.cloudflareVideoId}/thumbnails/thumbnail.jpg?time=1s&height=200`
                 : video.youtubeVideoId
                     ? `https://img.youtube.com/vi/${video.youtubeVideoId}/mqdefault.jpg`
-                    : null);
+                    : null));
 
         return (
             <div
@@ -226,7 +232,7 @@ const StaffDashboard = () => {
 
                 {/* Thumbnail */}
                 <div
-                    className="relative w-20 h-14 flex-shrink-0 rounded-lg bg-gray-900 overflow-hidden"
+                    className={`relative w-20 h-14 flex-shrink-0 rounded-lg overflow-hidden ${!thumbSrc && brandLogoUrl ? 'bg-white' : 'bg-gray-900'}`}
                     onClick={(e) => { e.stopPropagation(); setSelectedVideo(video); }}
                 >
                     {thumbSrc ? (
@@ -236,16 +242,25 @@ const StaffDashboard = () => {
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                             onError={(e) => { (e.target as HTMLImageElement).onerror = null; (e.target as HTMLImageElement).src = 'https://via.placeholder.com/120x80?text=Video'; }}
                         />
+                    ) : brandLogoUrl ? (
+                        <img
+                            src={brandLogoUrl}
+                            alt={video.make}
+                            className="w-full h-full object-contain p-1"
+                            onError={(e) => { (e.target as HTMLImageElement).onerror = null; (e.target as HTMLImageElement).style.display = 'none'; }}
+                        />
                     ) : (
                         <div className="w-full h-full flex items-center justify-center">
                             <FaVideo className="text-gray-600" size={16} />
                         </div>
                     )}
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
-                        <div className="w-6 h-6 rounded-full bg-white/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow">
-                            <FaPlay className="text-gray-800 ml-0.5" size={8} />
+                    {!isDeleted && (
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
+                            <div className="w-6 h-6 rounded-full bg-white/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow">
+                                <FaPlay className="text-gray-800 ml-0.5" size={8} />
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
 
                 {/* Info */}

@@ -26,6 +26,7 @@ export interface IVideo extends Omit<Document, 'model'> {
   mileage?: number;
   linkExpiresAt?: Date;
   thumbnailUrl?: string;
+  deletedAt?: Date;
   views: IVideoView[];
   createdAt: Date;
   updatedAt: Date;
@@ -50,6 +51,7 @@ const videoSchema = new mongoose.Schema<IVideo>(
     mileage: Number,
     linkExpiresAt: Date,
     thumbnailUrl: { type: String, trim: true },
+    deletedAt: { type: Date, default: null },
     views: [
       {
         shareId: { type: mongoose.Schema.Types.ObjectId, ref: 'AuditLog' },

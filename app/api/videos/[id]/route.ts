@@ -76,7 +76,11 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       await deleteFromCloudflareStream(video.cloudflareVideoId);
     }
 
-    await video.deleteOne();
+    // Soft delete — keep DB record (views, history, metadata) but remove video file reference
+    await Video.updateOne(
+      { _id: video._id },
+      { $set: { deletedAt: new Date() }, $unset: { cloudflareVideoId: '', videoUrl: '' } }
+    );
 
     await AuditLog.create({
       action: 'DELETE_VIDEO',
