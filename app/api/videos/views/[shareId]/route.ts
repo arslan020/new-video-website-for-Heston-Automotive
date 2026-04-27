@@ -19,7 +19,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ s
     const oid = new mongoose.Types.ObjectId(shareId);
 
     // Count how many view entries will be removed per video, then pull them and decrement viewCount
-    const videos = await Video.find({ 'views.shareId': oid }, { 'views.$': 0, viewCount: 1, views: 1 });
+    const videos = await Video.find({ 'views.shareId': oid });
     for (const video of videos) {
       const removeCount = video.views.filter(
         (v) => v.shareId?.toString() === shareId
