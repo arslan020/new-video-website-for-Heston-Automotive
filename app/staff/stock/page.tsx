@@ -84,6 +84,12 @@ function StockContent() {
   const [sendForm, setSendForm] = useState({ title: 'Mr', name: '', email: '', mobile: '' });
   const [sending, setSending] = useState(false);
 
+  const handleCloseSendModal = () => {
+    setSendModalOpen(false);
+    setSelectedVideo(null);
+    setSendForm({ title: 'Mr', name: '', email: '', mobile: '' });
+  };
+
   // Smart Upload Modal
   const [smartUploadOpen, setSmartUploadOpen] = useState(false);
   const [lookupRegistration, setLookupRegistration] = useState('');
@@ -456,7 +462,7 @@ function StockContent() {
 
   const handleSendLink = async () => {
     if (!selectedVideo) return;
-    if (!sendForm.email && !sendForm.mobile) { showToast('Provide email or mobile', 'error'); return; }
+    if (!sendForm.name.trim() || (!sendForm.email && !sendForm.mobile)) { showToast('Please enter customer name and email or mobile', 'error'); return; }
     setSending(true);
     try {
       const payload: any = {
@@ -472,8 +478,8 @@ function StockContent() {
         body: JSON.stringify(payload)
       });
       if (!res.ok) throw new Error('Send failed');
-      showToast('Video sent!', 'success');
-      setSendModalOpen(false);
+      showToast('Video link sent successfully!', 'success');
+      handleCloseSendModal();
     } catch (err: any) { showToast(err.message, 'error'); }
     finally { setSending(false); }
   };
@@ -595,7 +601,7 @@ function StockContent() {
                                                                     {matchingVideos.length > 1 && <div className="px-4 py-1.5 text-xs font-bold text-gray-400 bg-gray-50 uppercase tracking-wider">Video {idx + 1}</div>}
                                                                     <button onClick={() => { copyToClipboard(vid._id); setActiveMenu(null); }} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center gap-2 transition"><FaCopy size={14} className="text-gray-400" /> Copy Link</button>
                                                                     <button onClick={() => { window.open(`/view/${vid._id}`, '_blank'); setActiveMenu(null); }} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center gap-2 transition"><FaExternalLinkAlt size={14} className="text-gray-400" /> Open Video</button>
-                                                                    <button onClick={() => { setSelectedVideo(vid); setSendModalOpen(true); setActiveMenu(null); }} className="w-full text-left px-4 py-2 text-sm text-purple-600 hover:bg-purple-50 rounded-md flex items-center gap-2 transition font-medium"><FaPaperPlane size={14} className="text-purple-500/70" /> Send to Customer</button>
+                                                                    <button onClick={() => { setSelectedVideo(vid); setSendForm({ title: 'Mr', name: '', email: '', mobile: '' }); setSendModalOpen(true); setActiveMenu(null); }} className="w-full text-left px-4 py-2 text-sm text-purple-600 hover:bg-purple-50 rounded-md flex items-center gap-2 transition font-medium"><FaPaperPlane size={14} className="text-purple-500/70" /> Send to Customer</button>
                                                                 </div>
                                                             ))}
                                                             <div className="border-t border-gray-100 mt-1 pt-1">
@@ -936,7 +942,7 @@ function StockContent() {
       {sendModalOpen && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/30 backdrop-blur-sm">
           <div className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col animate-slide-left">
-            <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center"><div><h3 className="font-bold text-lg text-gray-800">Send Video to Customer</h3><p className="text-xs text-gray-500 mt-1 truncate max-w-[250px]">{selectedVideo?.title}</p></div><button onClick={() => setSendModalOpen(false)} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-full transition">&times;</button></div>
+            <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center"><div><h3 className="font-bold text-lg text-gray-800">Send Video to Customer</h3><p className="text-xs text-gray-500 mt-1 truncate max-w-[250px]">{selectedVideo?.title}</p></div><button onClick={handleCloseSendModal} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-full transition">&times;</button></div>
             <div className="flex-1 overflow-y-auto p-6"><div className="space-y-4">
                <div className="flex gap-4">
                  <div className="w-1/3"><label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Title</label><select value={sendForm.title} onChange={e => setSendForm(p => ({ ...p, title: e.target.value }))} className="w-full px-4 py-2.5 border border-gray-200 rounded-lg bg-white text-sm"><option value="Mr">Mr</option><option value="Mrs">Mrs</option><option value="Miss">Miss</option><option value="Ms">Ms</option><option value="Dr">Dr</option></select></div>
