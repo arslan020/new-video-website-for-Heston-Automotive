@@ -458,15 +458,9 @@ function StockContent() {
     if (!selectedVideo) return;
     if (!sendForm.email && !sendForm.mobile) { showToast('Provide email or mobile', 'error'); return; }
     setSending(true);
-    let shareId = '';
     try {
-      const shareRes = await fetch(`/api/videos/${selectedVideo._id}/share`, {
-        method: 'PATCH', headers: { Authorization: `Bearer ${user?.token}` }
-      });
-      if (shareRes.ok) shareId = (await shareRes.json()).shareId;
-      
       const payload: any = {
-          videoLink: `${window.location.origin}/view/${selectedVideo._id}${shareId ? `?s=${shareId}` : ''}`,
+          videoLink: `${window.location.origin}/view/${selectedVideo._id}`,
           customerName: sendForm.name, customerTitle: sendForm.title,
           vehicleDetails: { make: selectedVideo.make, model: selectedVideo.model, registration: selectedVideo.registration },
       };
@@ -480,7 +474,7 @@ function StockContent() {
       if (!res.ok) throw new Error('Send failed');
       showToast('Video sent!', 'success');
       setSendModalOpen(false);
-    } catch (err: any) { showToast(err.message, 'error'); } 
+    } catch (err: any) { showToast(err.message, 'error'); }
     finally { setSending(false); }
   };
 
