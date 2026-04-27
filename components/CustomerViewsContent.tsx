@@ -15,6 +15,7 @@ import {
   FaCheckCircle,
   FaPaperPlane,
   FaClock,
+  FaTrash,
 } from 'react-icons/fa';
 
 const DATE_FILTERS = [
@@ -81,6 +82,8 @@ export default function CustomerViewsContent({ isAdmin }: Props) {
   const [suspendedMap, setSuspendedMap] = useState<Record<string, boolean>>({});
   const [suspendLoading, setSuspendLoading] = useState<Record<string, boolean>>({});
   const [stockRegs, setStockRegs] = useState<Set<string>>(new Set());
+  const [deleteLoading, setDeleteLoading] = useState<Record<string, boolean>>({});
+  const [confirmDeleteKey, setConfirmDeleteKey] = useState<string | null>(null);
 
   const fetchVideos = useCallback(async () => {
     if (!user?.token) return;
@@ -155,6 +158,22 @@ export default function CustomerViewsContent({ isAdmin }: Props) {
       alert('Failed to change link status. Please try again.');
     } finally {
       setSuspendLoading((prev) => ({ ...prev, [sId]: false }));
+    }
+  };
+
+  const handleDeleteViews = async (shareIdStr: string, rowKey: string) => {
+    setDeleteLoading((prev) => ({ ...prev, [rowKey]: true }));
+    try {
+      await fetch(`/api/videos/views/${shareIdStr}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${user?.token}` },
+      });
+      setConfirmDeleteKey(null);
+      await fetchVideos();
+    } catch (err) {
+      console.error('Failed to delete views:', err);
+    } finally {
+      setDeleteLoading((prev) => ({ ...prev, [rowKey]: false }));
     }
   };
 
@@ -544,33 +563,68 @@ export default function CustomerViewsContent({ isAdmin }: Props) {
                           className="px-5 py-3.5 text-right"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          {shareIdStr ? (
-                            <button
-                              type="button"
-                              onClick={(e) => handleToggleSuspend(shareIdStr, e)}
-                              disabled={isTogglingThis}
-                              title={isSuspended ? 'Enable this link' : 'Suspend this link'}
-                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
-                                isSuspended
-                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                                  : 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100'
-                              } ${isTogglingThis ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                            >
-                              {isTogglingThis ? (
-                                <span className="inline-block w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                              ) : isSuspended ? (
-                                <>
-                                  <FaCheckCircle size={10} /> Enable
-                                </>
+                          <div className="flex items-center justify-end gap-2">
+                            {shareIdStr ? (
+                              <button
+                                type="button"
+                                onClick={(e) => handleToggleSuspend(shareIdStr, e)}
+                                disabled={isTogglingThis}
+                                title={isSuspended ? 'Enable this link' : 'Suspend this link'}
+                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                                  isSuspended
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                    : 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100'
+                                } ${isTogglingThis ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                              >
+                                {isTogglingThis ? (
+                                  <span className="inline-block w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                ) : isSuspended ? (
+                                  <>
+                                    <FaCheckCircle size={10} /> Enable
+                                  </>
+                                ) : (
+                                  <>
+                                    <FaBan size={10} /> Suspend
+                                  </>
+                                )}
+                              </button>
+                            ) : (
+                              <span className="text-xs text-gray-300 italic">No token</span>
+                            )}
+
+                            {shareIdStr && (
+                              confirmDeleteKey === key ? (
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteViews(shareIdStr, key)}
+                                    disabled={deleteLoading[key]}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border bg-red-600 text-white border-red-600 hover:bg-red-700 disabled:opacity-50"
+                                  >
+                                    {deleteLoading[key] ? (
+                                      <span className="inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    ) : 'Yes'}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setConfirmDeleteKey(null)}
+                                    className="inline-flex items-center px-2.5 py-1.5 rounded-lg text-xs font-semibold border bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                                  >
+                                    No
+                                  </button>
+                                </div>
                               ) : (
-                                <>
-                                  <FaBan size={10} /> Suspend
-                                </>
-                              )}
-                            </button>
-                          ) : (
-                            <span className="text-xs text-gray-300 italic">No token</span>
-                          )}
+                                <button
+                                  type="button"
+                                  onClick={() => setConfirmDeleteKey(key)}
+                                  title="Delete this customer view"
+                                  className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-gray-200 text-gray-400 hover:text-red-500 hover:border-red-200 hover:bg-red-50 transition-all"
+                                >
+                                  <FaTrash size={10} />
+                                </button>
+                              )
+                            )}
+                          </div>
                         </td>
                       </tr>
 
