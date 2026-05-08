@@ -67,7 +67,6 @@ function AdminStockContent() {
   const [stock, setStock] = useState<StockItem[]>([]);
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
   const [lastSync, setLastSync] = useState<string>('');
 
   // UI States
@@ -154,22 +153,6 @@ function AdminStockContent() {
     fetchVideos();
     fetchAllVehicleMetadata();
   }, [fetchStock, fetchVideos, fetchAllVehicleMetadata]);
-
-  const handleSync = async () => {
-    setSyncing(true);
-    try {
-      const res = await fetch('/api/autotrader/sync', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${user?.token}` },
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Sync failed');
-      showToast(`Sync complete — ${data.count || 0} vehicles updated`, 'success');
-      fetchStock();
-    } catch (err: unknown) {
-      showToast(err instanceof Error ? err.message : 'Sync failed', 'error');
-    } finally { setSyncing(false); }
-  };
 
   const getVehicleData = (item: StockItem) => {
     const mileage =
