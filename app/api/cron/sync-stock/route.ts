@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
     console.log('[AutoTrader Cron] Starting scheduled sync...');
     const result = await fetchAllStockFromAutoTrader();
     console.log('[AutoTrader Cron] Done:', result);
-    return Response.json({ success: true, ...result });
+    return Response.json({ ...result, success: true });
   } catch (err) {
     console.error('[AutoTrader Cron] Error:', err);
     return Response.json({ error: 'Sync failed' }, { status: 500 });
