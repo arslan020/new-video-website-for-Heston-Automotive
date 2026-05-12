@@ -1,0 +1,16 @@
+name: AutoTrader Stock Sync
+
+on:
+  schedule:
+    - cron: '0 6,12,18 * * *'  # 6am, 12pm, 6pm UTC
+  workflow_dispatch:  # manual trigger from GitHub UI
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger stock sync
+        run: |
+          curl -X GET "${{ secrets.SITE_URL }}/api/cron/sync-stock" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            --fail

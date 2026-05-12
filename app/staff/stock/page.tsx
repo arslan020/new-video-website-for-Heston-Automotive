@@ -9,7 +9,7 @@ import { useToast } from '@/components/ToastProvider';
 import {
   FaCar, FaVideo, FaCopy, FaCheckCircle, FaCheck, FaPlus, FaCloudUploadAlt,
   FaTimes, FaFile, FaSearch, FaGasPump, FaCog, FaCalendar, FaPalette,
-  FaBolt, FaLeaf, FaTachometerAlt, FaUsers, FaEllipsisV, FaExternalLinkAlt, FaPaperPlane, FaTrash, FaLink
+  FaBolt, FaLeaf, FaTachometerAlt, FaUsers, FaEllipsisV, FaExternalLinkAlt, FaPaperPlane, FaTrash, FaLink, FaSync
 } from 'react-icons/fa';
 
 interface StockItem {
@@ -62,6 +62,7 @@ function StockContent() {
   const [videos, setVideos] = useState<Video[]>([]);
   const [loadingStock, setLoadingStock] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
   // States
   const [filterStatus, setFilterStatus] = useState('All');
@@ -151,6 +152,20 @@ function StockContent() {
       showToast(err.message, 'error');
     } finally { setLoadingStock(false); }
   }, [user, showToast]);
+
+  const handleManualSync = async () => {
+    if (!user?.token || syncing) return;
+    setSyncing(true);
+    try {
+      const res = await fetch('/api/autotrader/sync', { method: 'POST', headers: { Authorization: `Bearer ${user.token}` } });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Sync failed');
+      showToast('Stock synced successfully', 'success');
+      await fetchStock();
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    } finally { setSyncing(false); }
+  };
 
   const fetchVideos = useCallback(async () => {
     if (!user?.token) return;
@@ -511,7 +526,13 @@ function StockContent() {
           <div>
               <h1 className="text-3xl font-bold text-gray-800">All Vehicles</h1>
               <p className="text-gray-500 mt-1">Manage inventory and upload videos.</p>
-              {lastSyncTime && <p className="text-xs text-gray-400 mt-1">Last sync: {new Date(lastSyncTime).toLocaleString()}</p>}
+              <div className="flex items-center gap-2 mt-1">
+                  {lastSyncTime && <p className="text-xs text-gray-400">Last sync: {new Date(lastSyncTime).toLocaleString()}</p>}
+                  <button type="button" onClick={handleManualSync} disabled={syncing} title="Sync now" className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition">
+                      <FaSync className={syncing ? 'animate-spin' : ''} size={11} />
+                      {syncing ? 'Syncing...' : 'Sync Now'}
+                  </button>
+              </div>
           </div>
           <button type="button" onClick={() => { setSmartUploadOpen(true); resetUploadState(); setLookupRegistration(''); setFetchedVehicle(null); }} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2.5 rounded-lg font-bold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition flex items-center gap-2">
               <FaVideo /> Upload Video via Registration

@@ -5,7 +5,7 @@ import { fetchAllStockFromAutoTrader } from '@/lib/autotrader';
 export async function POST(req: NextRequest) {
   const user = await getUserFromRequest(req);
   if (!user) return unauthorizedResponse();
-  if (user.role !== 'admin') return forbiddenResponse();
+  if (user.role !== 'admin' && user.role !== 'staff') return forbiddenResponse();
 
   try {
     const result = await fetchAllStockFromAutoTrader();
