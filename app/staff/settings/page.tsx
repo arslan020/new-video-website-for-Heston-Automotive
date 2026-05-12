@@ -344,7 +344,7 @@ function StaffSettingsContent() {
                         {/* Help Card */}
                         <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-md p-5 sm:p-6 text-white relative overflow-hidden">
                             <div className="relative z-10">
-                                <h3 className="font-bold text-base sm:text-lg mb-2">Need Help?</h3>
+                                <h3 className="font-bold text-base sm:text-lg mb-2">Need Help??</h3>
                                 <p className="text-white/90 text-sm max-w-md leading-relaxed">
                                     If you need to update your email or phone number, please contact your administrator directly as these are managed centrally.
                                 </p>
