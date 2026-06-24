@@ -64,16 +64,102 @@ export async function POST(req: NextRequest) {
 
     if (email) {
       try {
+        // Always use the public production URL so the logo loads in email clients
+        // (deriving from finalVideoLink would break for localhost / preview domains).
+        const logoUrl = 'https://video.hestonautomotive.com/business-logo.png';
+        const vehicleName = `${vehicleDetails?.make ?? ''} ${vehicleDetails?.model ?? ''}`.trim();
+        const year = new Date().getFullYear();
+
         await sendEmail({
           to: email,
-          subject: `Your Video Presentation – ${vehicleDetails?.make} ${vehicleDetails?.model}`,
+          subject: `Your Video Presentation – ${vehicleName}`,
           html: `
-            <div style="font-family:Arial,sans-serif;max-width:600px;color:#333;">
-              <h2>Your Video Presentation</h2>
-              <p>Dear <strong>${greetingName}</strong>, thank you for your interest in the <strong>${vehicleDetails?.make} ${vehicleDetails?.model}</strong>.</p>
-              <p><a href="${finalVideoLink}" style="background:#28a745;color:#fff;padding:12px 30px;text-decoration:none;border-radius:25px;display:inline-block;font-weight:600;">▶ Watch Video Presentation</a></p>
-              <p style="color:#888;font-size:12px;">For security, this link will expire in 4 days.</p>
-              <p>Have questions? Call <a href="tel:02085648030">020 8564 8030</a> or email <a href="mailto:enquiries@hestonautomotive.com">enquiries@hestonautomotive.com</a></p>
+            <div style="margin:0;padding:0;background-color:#eef0f5;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#eef0f5;padding:24px 12px;">
+                <tr>
+                  <td align="center">
+                    <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 4px 20px rgba(30,27,75,0.08);font-family:Arial,Helvetica,sans-serif;">
+                      <!-- top accent bar -->
+                      <tr><td style="height:6px;background:linear-gradient(90deg,#2563eb,#60a5fa);font-size:0;line-height:0;">&nbsp;</td></tr>
+
+                      <!-- logo -->
+                      <tr>
+                        <td align="center" style="padding:32px 40px 20px;">
+                          <img src="${logoUrl}" alt="Heston Automotive" width="200" style="display:block;width:200px;max-width:60%;height:auto;" />
+                        </td>
+                      </tr>
+                      <tr><td style="padding:0 40px;"><div style="border-top:1px solid #eceef3;font-size:0;line-height:0;">&nbsp;</div></td></tr>
+
+                      <!-- intro -->
+                      <tr>
+                        <td style="padding:28px 40px 8px;">
+                          <span style="display:inline-block;background-color:#eaf1fe;color:#2563eb;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:6px 14px;border-radius:20px;">Personalised For You</span>
+                          <h1 style="margin:18px 0 10px;font-size:26px;line-height:1.2;color:#16182b;">Your Video Presentation</h1>
+                          <p style="margin:0;font-size:15px;line-height:1.6;color:#555b6b;">
+                            Dear <strong style="color:#16182b;">${greetingName}</strong>, thank you for your interest in the <strong style="color:#16182b;">${vehicleName}</strong>.
+                            We&rsquo;ve prepared a detailed video walkthrough just for you.
+                          </p>
+                        </td>
+                      </tr>
+
+                      <!-- vehicle of interest -->
+                      <tr>
+                        <td style="padding:22px 40px 0;">
+                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f7f8fa;border:1px solid #eceef3;border-left:4px solid #2563eb;border-radius:10px;">
+                            <tr>
+                              <td style="padding:18px 22px;">
+                                <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#9aa1b0;margin-bottom:6px;">Vehicle Of Interest</div>
+                                <div style="font-size:20px;font-weight:700;color:#16182b;">${vehicleName}</div>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+
+                      <!-- watch button -->
+                      <tr>
+                        <td style="padding:22px 40px 0;">
+                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f9fafb;border:1px solid #eceef3;border-radius:10px;">
+                            <tr>
+                              <td align="center" style="padding:28px 24px;">
+                                <p style="margin:0 0 20px;font-size:14px;line-height:1.6;color:#6b7280;">Click below to watch the full video presentation showcasing the features and condition of this vehicle.</p>
+                                <a href="${finalVideoLink}" style="background-color:#22a447;color:#ffffff;padding:15px 36px;text-decoration:none;border-radius:30px;display:inline-block;font-weight:700;font-size:15px;">&#9654;&nbsp; Watch Video Presentation</a>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+
+                      <!-- help / expiry -->
+                      <tr>
+                        <td style="padding:22px 40px 32px;">
+                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#eef3fc;border-radius:10px;">
+                            <tr>
+                              <td align="center" style="padding:20px 24px;">
+                                <p style="margin:0 0 8px;font-size:13px;color:#6b7280;">Note: For security, this link will expire in 4 days.</p>
+                                <p style="margin:0 0 6px;font-size:13px;color:#6b7280;">Have questions? We&rsquo;re here to help.</p>
+                                <p style="margin:0;font-size:14px;">
+                                  <a href="tel:02085648030" style="color:#2563eb;text-decoration:none;font-weight:600;">020 8564 8030</a>
+                                  <span style="color:#c2c8d4;">&nbsp;&middot;&nbsp;</span>
+                                  <a href="mailto:enquiries@hestonautomotive.com" style="color:#2563eb;text-decoration:none;font-weight:600;">enquiries@hestonautomotive.com</a>
+                                </p>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+
+                      <!-- footer -->
+                      <tr>
+                        <td align="center" style="background-color:#1e1b4b;padding:22px 40px;">
+                          <p style="margin:0 0 6px;font-size:12px;color:#ffffff;">&copy; ${year} Heston Automotive. All rights reserved.</p>
+                          <p style="margin:0;font-size:12px;color:#9d9bc4;">This email was sent regarding your enquiry about ${vehicleName}.</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
             </div>
           `,
         });
