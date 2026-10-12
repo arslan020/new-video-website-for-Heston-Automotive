@@ -138,7 +138,7 @@ function MyVideosContent() {
       const res = await fetch(url, { headers: { Authorization: `Bearer ${user.token}` } });
       if (res.ok) {
         const data = await res.json();
-        setVideos(data.videos || data);
+        setVideos((data.videos || data).filter((v: Video) => !v.deletedAt));
       }
     } catch (err) {
       console.error(err);

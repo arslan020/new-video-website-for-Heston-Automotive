@@ -41,6 +41,7 @@ interface Video {
   make?: string;
   model?: string;
   uploadedBy?: { name?: string; username?: string };
+  deletedAt?: string;
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -202,7 +203,7 @@ function StockContent() {
     const vData = getVehicleData(item);
     const stockReg = (vData.registration || '').replace(/\s/g, '').toUpperCase();
     if (!stockReg) return [];
-    return videos.filter(video => (video.registration ? (video.registration.replace(/\s/g, '').toUpperCase() === stockReg) : (video.title || '').replace(/\s/g, '').toUpperCase().includes(stockReg)));
+    return videos.filter(video => !video.deletedAt && (video.registration ? (video.registration.replace(/\s/g, '').toUpperCase() === stockReg) : (video.title || '').replace(/\s/g, '').toUpperCase().includes(stockReg)));
   };
 
   const copyToClipboard = async (videoId: string) => {
