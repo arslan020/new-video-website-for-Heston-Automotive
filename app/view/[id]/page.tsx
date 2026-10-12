@@ -290,18 +290,41 @@ export default function VideoViewPage() {
                                           <div><p className="text-xs text-gray-400 uppercase font-semibold mb-1">Make</p><p className="font-medium text-gray-900 text-sm">{video.vehicleDetails.make}</p></div>
                                           <div><p className="text-xs text-gray-400 uppercase font-semibold mb-1">Model</p><p className="font-medium text-gray-900 text-sm truncate" title={video.vehicleDetails.model}>{video.vehicleDetails.model}</p></div>
                                       </div>
-                                      <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                                          <div><p className="text-xs text-gray-400 uppercase font-semibold mb-1">Fuel</p><p className="font-medium text-gray-900 text-sm">{video.vehicleDetails.fuelType || '-'}</p></div>
-                                          <div><p className="text-xs text-gray-400 uppercase font-semibold mb-1">Trans</p><p className="font-medium text-gray-900 text-sm">{video.vehicleDetails.transmissionType || '-'}</p></div>
-                                      </div>
-                                      <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                                          <div><p className="text-xs text-gray-400 uppercase font-semibold mb-1">Engine</p><p className="font-medium text-gray-900 text-sm">{video.vehicleDetails.engineSize ? `${video.vehicleDetails.engineSize} cc` : '-'}</p></div>
-                                          <div><p className="text-xs text-gray-400 uppercase font-semibold mb-1">BHP</p><p className="font-medium text-gray-900 text-sm">{video.vehicleDetails.bhp || '-'}</p></div>
-                                      </div>
-                                      <div><p className="text-xs text-gray-400 uppercase font-semibold mb-1">Variant</p><p className="font-medium text-gray-900 text-sm">{video.vehicleDetails.derivative || '-'}</p></div>
-                                      <div><p className="text-xs text-gray-400 uppercase font-semibold mb-1">Colour</p><p className="font-medium text-gray-900 text-sm">{video.vehicleDetails.colour || '-'}</p></div>
-                                      <div><p className="text-xs text-gray-400 uppercase font-semibold mb-1">Date First Reg</p><p className="font-medium text-gray-900 text-sm">{video.vehicleDetails.firstRegistrationDate ? new Date(video.vehicleDetails.firstRegistrationDate).toLocaleDateString() : '-'}</p></div>
-                                      <div><p className="text-xs text-gray-400 uppercase font-semibold mb-1">Mileage</p><p className="font-medium text-gray-900 text-sm">{(video.mileage || video.vehicleDetails?.mileage || video.vehicleDetails?.odometerReadingMiles) ? `${(video.mileage || video.vehicleDetails?.mileage || video.vehicleDetails?.odometerReadingMiles).toLocaleString()} miles` : '-'}</p></div>
+                                      {(() => {
+                                          const hasTrans = !!video.vehicleDetails.transmissionType;
+                                          const hasEngine = !!video.vehicleDetails.engineSize;
+                                          const hasBhp = !!video.vehicleDetails.bhp;
+                                          const hasVariant = !!video.vehicleDetails.derivative;
+                                          const mileageValue = video.mileage || video.vehicleDetails?.mileage || video.vehicleDetails?.odometerReadingMiles;
+                                          return (
+                                              <>
+                                                  <div className={`grid gap-3 sm:gap-4 ${hasTrans ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                                                      <div><p className="text-xs text-gray-400 uppercase font-semibold mb-1">Fuel</p><p className="font-medium text-gray-900 text-sm">{video.vehicleDetails.fuelType || '-'}</p></div>
+                                                      {hasTrans && (
+                                                          <div><p className="text-xs text-gray-400 uppercase font-semibold mb-1">Trans</p><p className="font-medium text-gray-900 text-sm">{video.vehicleDetails.transmissionType}</p></div>
+                                                      )}
+                                                  </div>
+                                                  {(hasEngine || hasBhp) && (
+                                                      <div className={`grid gap-3 sm:gap-4 ${hasEngine && hasBhp ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                                                          {hasEngine && (
+                                                              <div><p className="text-xs text-gray-400 uppercase font-semibold mb-1">Engine</p><p className="font-medium text-gray-900 text-sm">{video.vehicleDetails.engineSize} cc</p></div>
+                                                          )}
+                                                          {hasBhp && (
+                                                              <div><p className="text-xs text-gray-400 uppercase font-semibold mb-1">BHP</p><p className="font-medium text-gray-900 text-sm">{video.vehicleDetails.bhp}</p></div>
+                                                          )}
+                                                      </div>
+                                                  )}
+                                                  {hasVariant && (
+                                                      <div><p className="text-xs text-gray-400 uppercase font-semibold mb-1">Variant</p><p className="font-medium text-gray-900 text-sm">{video.vehicleDetails.derivative}</p></div>
+                                                  )}
+                                                  <div><p className="text-xs text-gray-400 uppercase font-semibold mb-1">Colour</p><p className="font-medium text-gray-900 text-sm">{video.vehicleDetails.colour || '-'}</p></div>
+                                                  <div><p className="text-xs text-gray-400 uppercase font-semibold mb-1">Date First Reg</p><p className="font-medium text-gray-900 text-sm">{video.vehicleDetails.firstRegistrationDate ? new Date(video.vehicleDetails.firstRegistrationDate).toLocaleDateString() : '-'}</p></div>
+                                                  {!!mileageValue && (
+                                                      <div><p className="text-xs text-gray-400 uppercase font-semibold mb-1">Mileage</p><p className="font-medium text-gray-900 text-sm">{mileageValue.toLocaleString()} miles</p></div>
+                                                  )}
+                                              </>
+                                          );
+                                      })()}
                                   </div>
                               </div>
                           )}
