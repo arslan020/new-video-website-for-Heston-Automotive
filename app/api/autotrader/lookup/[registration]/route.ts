@@ -16,8 +16,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ regi
 
     const stockRecord = await Stock.findOne({ advertiserId });
     if (stockRecord?.stockData) {
-      const localVehicle = (stockRecord.stockData as Array<{ vehicle: { registration: string } }>).find(
-        (item) => item.vehicle.registration.replace(/\s/g, '').toUpperCase() === reg
+      const localVehicle = (stockRecord.stockData as Array<{ vehicle?: { registration?: string } }>).find(
+        (item) => item.vehicle?.registration?.replace(/\s/g, '').toUpperCase() === reg
       );
       if (localVehicle) {
         return Response.json({ source: 'local', ...localVehicle });
