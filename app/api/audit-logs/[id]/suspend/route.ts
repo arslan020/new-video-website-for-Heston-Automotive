@@ -1,11 +1,12 @@
 import { NextRequest } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import AuditLog from '@/models/AuditLog';
-import { getUserFromRequest, unauthorizedResponse } from '@/lib/auth';
+import { getUserFromRequest, unauthorizedResponse, forbiddenResponse } from '@/lib/auth';
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getUserFromRequest(req);
   if (!user) return unauthorizedResponse();
+  if (user.role !== 'admin') return forbiddenResponse();
 
   try {
     await connectDB();

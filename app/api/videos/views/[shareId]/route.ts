@@ -1,12 +1,13 @@
 import { NextRequest } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import Video from '@/models/Video';
-import { getUserFromRequest, unauthorizedResponse } from '@/lib/auth';
+import { getUserFromRequest, unauthorizedResponse, forbiddenResponse } from '@/lib/auth';
 import mongoose from 'mongoose';
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ shareId: string }> }) {
   const user = await getUserFromRequest(req);
   if (!user) return unauthorizedResponse();
+  if (user.role !== 'admin') return forbiddenResponse();
 
   try {
     await connectDB();

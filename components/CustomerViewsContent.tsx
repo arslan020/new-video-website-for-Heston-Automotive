@@ -88,7 +88,7 @@ export default function CustomerViewsContent({ isAdmin }: Props) {
   const fetchVideos = useCallback(async () => {
     if (!user?.token) return;
     try {
-      const url = isAdmin ? '/api/videos?all=true' : '/api/videos';
+      const url = '/api/videos?all=true';
       const res = await fetch(url, { headers: { Authorization: `Bearer ${user.token}` } });
       const data: Video[] = await res.json();
       setVideos(data);
@@ -262,7 +262,7 @@ export default function CustomerViewsContent({ isAdmin }: Props) {
     setExpandedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const showAdminColumn = isAdmin;
+  const showAdminColumn = true;
 
   return (
     <div className="w-full px-6">
@@ -564,7 +564,9 @@ export default function CustomerViewsContent({ isAdmin }: Props) {
                           onClick={(e) => e.stopPropagation()}
                         >
                           <div className="flex items-center justify-end gap-2">
-                            {shareIdStr ? (
+                            {!isAdmin ? (
+                              <span className="text-xs text-gray-300 italic">—</span>
+                            ) : shareIdStr ? (
                               <button
                                 type="button"
                                 onClick={(e) => handleToggleSuspend(shareIdStr, e)}
@@ -592,7 +594,7 @@ export default function CustomerViewsContent({ isAdmin }: Props) {
                               <span className="text-xs text-gray-300 italic">No token</span>
                             )}
 
-                            {shareIdStr && (
+                            {isAdmin && shareIdStr && (
                               confirmDeleteKey === key ? (
                                 <div className="flex items-center gap-1">
                                   <button
