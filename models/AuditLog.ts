@@ -8,6 +8,7 @@ export type AuditAction =
   | 'SEND_VIDEO_LINK'
   | 'SUSPEND_LINK'
   | 'ENABLE_LINK'
+  | 'UPDATE_VEHICLE_STAGE'
   | 'OTHER';
 
 export interface IAuditLog extends Document {
@@ -27,7 +28,7 @@ const auditLogSchema = new mongoose.Schema<IAuditLog>(
     action: {
       type: String,
       required: true,
-      enum: ['UPLOAD_VIDEO', 'DELETE_VIDEO', 'UPDATE_VIDEO', 'SHARE_VIDEO_LINK', 'SEND_VIDEO_LINK', 'SUSPEND_LINK', 'ENABLE_LINK', 'OTHER'],
+      enum: ['UPLOAD_VIDEO', 'DELETE_VIDEO', 'UPDATE_VIDEO', 'SHARE_VIDEO_LINK', 'SEND_VIDEO_LINK', 'SUSPEND_LINK', 'ENABLE_LINK', 'UPDATE_VEHICLE_STAGE', 'OTHER'],
     },
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     details: { type: String, required: true },
@@ -39,5 +40,8 @@ const auditLogSchema = new mongoose.Schema<IAuditLog>(
   { timestamps: true }
 );
 
-const AuditLog: Model<IAuditLog> = mongoose.models.AuditLog || mongoose.model<IAuditLog>('AuditLog', auditLogSchema);
+if (process.env.NODE_ENV !== 'production' && mongoose.models.AuditLog) {
+  delete (mongoose.models as any).AuditLog;
+}
+const AuditLog: Model<IAuditLog> = (mongoose.models.AuditLog as Model<IAuditLog>) || mongoose.model<IAuditLog>('AuditLog', auditLogSchema);
 export default AuditLog;

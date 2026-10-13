@@ -46,7 +46,7 @@ export default function LoginPage() {
     <div className="loginPage">
       <div className="loginWrap">
         <div className="loginLogo">
-          <Image src="/business-logo.png" alt="Heston Automotive" width={280} height={80} style={{ height: 'auto' }} />
+          <Image src="/business-logo.webp" alt="Changan Heston Automotive" width={384} height={32} style={{ height: 'auto' }} />
         </div>
 
         <h2 className="loginHeading">

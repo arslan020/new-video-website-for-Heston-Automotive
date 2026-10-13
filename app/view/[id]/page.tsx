@@ -193,7 +193,7 @@ export default function VideoViewPage() {
   return (
       <div className="min-h-screen bg-[#f8f9fa] flex flex-col font-sans">
           <header className="bg-white shadow-sm py-3 px-4 flex justify-center sticky top-0 z-30">
-              <img src="/business-logo.png" alt="Heston Automotive" className="h-9 sm:h-10 md:h-12 object-contain" />
+              <img src="/business-logo.webp" alt="Changan Heston Automotive" className="h-6 sm:h-8 md:h-9 object-contain max-w-full" />
           </header>
 
           <main className="flex-1 flex flex-col items-center px-3 py-4 sm:px-4 sm:py-6 md:p-8">

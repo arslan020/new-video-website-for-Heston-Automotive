@@ -8,6 +8,7 @@ const PUBLIC_API_PATHS = [
   '/api/auth/reset-password',
   '/api/magic-links',
   '/api/videos',
+  '/api/vehicle-tracking',
   '/api/bookings',
   '/api/contact',
   '/api/vehicle-metadata',

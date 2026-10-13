@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import { FaHistory, FaUser, FaTrash, FaVideo } from 'react-icons/fa';
+import { FaHistory, FaUser, FaTrash, FaVideo, FaShippingFast } from 'react-icons/fa';
 
 interface AuditUser {
   name?: string;
@@ -67,6 +67,12 @@ function ActivityLogsContent() {
             <FaVideo size={14} />
           </div>
         );
+      case 'UPDATE_VEHICLE_STAGE':
+        return (
+          <div className="p-2 bg-indigo-100 rounded-full text-indigo-600">
+            <FaShippingFast size={14} />
+          </div>
+        );
       default:
         return (
           <div className="p-2 bg-gray-100 rounded-full text-gray-600">
@@ -82,6 +88,8 @@ function ActivityLogsContent() {
         return 'text-red-600 font-medium';
       case 'UPLOAD_VIDEO':
         return 'text-green-600 font-medium';
+      case 'UPDATE_VEHICLE_STAGE':
+        return 'text-indigo-600 font-medium';
       default:
         return 'text-gray-600';
     }

@@ -49,11 +49,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </button>
             <button onClick={() => router.push(user.role === 'admin' ? '/admin' : '/staff')} className="focus:outline-none">
               <Image
-                src="/business-logo.png"
-                alt="Heston Automotive"
-                width={160}
-                height={40}
-                className="object-contain h-10 w-auto"
+                src="/business-logo.webp"
+                alt="Changan Heston Automotive"
+                width={384}
+                height={32}
+                className="object-contain h-8 w-auto"
               />
             </button>
           </div>

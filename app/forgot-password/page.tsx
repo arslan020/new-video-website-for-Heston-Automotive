@@ -37,13 +37,13 @@ export default function ForgotPasswordPage() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#f0f4f8] px-4 py-8 font-sans text-gray-700">
       <div className="mb-5 sm:mb-6">
         <Image
-          src="/business-logo.png"
-          alt="Heston Automotive"
-          width={200}
-          height={64}
+          src="/business-logo.webp"
+          alt="Changan Heston Automotive"
+          width={384}
+          height={32}
           preload
-          style={{ width: 'auto', height: '52px' }}
-          className="object-contain sm:h-16"
+          style={{ width: '240px', height: 'auto' }}
+          className="object-contain"
         />
       </div>
 

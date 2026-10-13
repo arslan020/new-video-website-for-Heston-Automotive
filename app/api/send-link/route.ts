@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
       try {
         // Always use the public production URL so the logo loads in email clients
         // (deriving from finalVideoLink would break for localhost / preview domains).
-        const logoUrl = 'https://video.hestonautomotive.com/business-logo.png';
+        const logoUrl = 'https://video.hestonautomotive.com/business-logo.webp';
         const vehicleName = `${vehicleDetails?.make ?? ''} ${vehicleDetails?.model ?? ''}`.trim();
         const year = new Date().getFullYear();
 
@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
                       <!-- logo -->
                       <tr>
                         <td align="center" style="padding:32px 40px 20px;">
-                          <img src="${logoUrl}" alt="Heston Automotive" width="200" style="display:block;width:200px;max-width:60%;height:auto;" />
+                          <img src="${logoUrl}" alt="Changan Heston Automotive" width="220" style="display:block;width:220px;max-width:60%;height:auto;" />
                         </td>
                       </tr>
                       <tr><td style="padding:0 40px;"><div style="border-top:1px solid #eceef3;font-size:0;line-height:0;">&nbsp;</div></td></tr>
