@@ -10,6 +10,7 @@ export type AuditAction =
   | 'ENABLE_LINK'
   | 'UPDATE_VEHICLE_STAGE'
   | 'SEND_TRACKING_LINK'
+  | 'ADD_VEHICLE_REMARK'
   | 'OTHER';
 
 export interface IAuditLog extends Document {
@@ -29,7 +30,7 @@ const auditLogSchema = new mongoose.Schema<IAuditLog>(
     action: {
       type: String,
       required: true,
-      enum: ['UPLOAD_VIDEO', 'DELETE_VIDEO', 'UPDATE_VIDEO', 'SHARE_VIDEO_LINK', 'SEND_VIDEO_LINK', 'SUSPEND_LINK', 'ENABLE_LINK', 'UPDATE_VEHICLE_STAGE', 'SEND_TRACKING_LINK', 'OTHER'],
+      enum: ['UPLOAD_VIDEO', 'DELETE_VIDEO', 'UPDATE_VIDEO', 'SHARE_VIDEO_LINK', 'SEND_VIDEO_LINK', 'SUSPEND_LINK', 'ENABLE_LINK', 'UPDATE_VEHICLE_STAGE', 'SEND_TRACKING_LINK', 'ADD_VEHICLE_REMARK', 'OTHER'],
     },
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     details: { type: String, required: true },

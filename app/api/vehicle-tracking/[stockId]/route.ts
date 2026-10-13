@@ -14,6 +14,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ stoc
 
     if (!record) return Response.json({ message: 'Tracking record not found' }, { status: 404 });
 
+    // Only count real customer visits, not staff previewing the link, and not the
+    // dashboard's own polling of /api/vehicle-tracking (that hits the list route, not this one).
+    const user = await getUserFromRequest(req);
+    const isStaff = user && (user.role === 'admin' || user.role === 'staff');
+    if (!isStaff) {
+      record.lastViewedAt = new Date();
+      await record.save();
+    }
+
     return Response.json({
       stockId: record.stockId,
       registration: record.registration,
@@ -25,6 +34,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ stoc
       currentStage: record.currentStage,
       updatedAt: record.updatedAt,
       stages: TRACKING_STAGES,
+      isPreOrder: record.isPreOrder || false,
+      customerName: record.customerName,
+      remarks: record.remarks.map((r) => ({
+        stage: r.stage,
+        text: r.text,
+        createdAt: r.createdAt,
+        customerReply: r.customerReply,
+        repliedAt: r.repliedAt,
+      })),
     });
   } catch (err) {
     console.error(err);
@@ -41,7 +59,21 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ st
     await connectDB();
     const { stockId } = await params;
     const body = await req.json();
-    const { stage, vin, registration, make, model, derivative, colour, image } = body;
+    const {
+      stage, vin, registration, make, model, derivative, colour, image,
+      isPreOrder, customerName, customerEmail, customerMobile, colourOnly,
+    } = body;
+
+    if (colourOnly) {
+      if (!colour) return Response.json({ message: 'Colour is required' }, { status: 400 });
+      const record = await VehicleTracking.findOneAndUpdate(
+        { stockId },
+        { $set: { colour, ...(image !== undefined && { image }) } },
+        { new: true }
+      );
+      if (!record) return Response.json({ message: 'Tracking record not found' }, { status: 404 });
+      return Response.json(record);
+    }
 
     if (!isValidStage(stage)) {
       return Response.json({ message: 'Invalid stage' }, { status: 400 });
@@ -59,6 +91,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ st
           ...(derivative !== undefined && { derivative }),
           ...(colour !== undefined && { colour }),
           ...(image !== undefined && { image }),
+          ...(isPreOrder !== undefined && { isPreOrder }),
+          ...(customerName !== undefined && { customerName }),
+          ...(customerEmail !== undefined && { customerEmail }),
+          ...(customerMobile !== undefined && { customerMobile }),
         },
         $push: { stageHistory: { stage, updatedAt: new Date(), updatedBy: user._id } },
       },
@@ -77,5 +113,32 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ st
   } catch (err) {
     console.error(err);
     return Response.json({ message: 'Failed to update tracking record' }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ stockId: string }> }) {
+  const user = await getUserFromRequest(req);
+  if (!user) return unauthorizedResponse();
+  if (user.role !== 'admin' && user.role !== 'staff') return forbiddenResponse();
+
+  try {
+    await connectDB();
+    const { stockId } = await params;
+    const record = await VehicleTracking.findOneAndDelete({ stockId });
+
+    if (!record) return Response.json({ message: 'Tracking record not found' }, { status: 404 });
+
+    await AuditLog.create({
+      action: 'UPDATE_VEHICLE_STAGE',
+      user: user._id,
+      details: `Deleted ${record.isPreOrder ? 'customer order' : 'tracking record'} for ${record.make || ''} ${record.model || ''}${record.customerName ? ` (${record.customerName})` : ''}`,
+      targetId: stockId,
+      metadata: { deleted: true, customerName: record.customerName || null },
+    });
+
+    return Response.json({ message: 'Tracking record deleted' });
+  } catch (err) {
+    console.error(err);
+    return Response.json({ message: 'Failed to delete tracking record' }, { status: 500 });
   }
 }
