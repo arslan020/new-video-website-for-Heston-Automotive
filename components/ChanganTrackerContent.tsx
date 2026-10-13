@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/components/ToastProvider';
 import { TRACKING_STAGES } from '@/lib/trackingStages';
-import { FaCar, FaLink, FaCheck, FaExternalLinkAlt, FaSync } from 'react-icons/fa';
+import UKPhoneInput from '@/components/UKPhoneInput';
+import { FaCar, FaLink, FaCheck, FaExternalLinkAlt, FaSync, FaPaperPlane, FaTimes } from 'react-icons/fa';
 
 interface StockVehicle {
   registration?: string | null;
@@ -35,6 +36,9 @@ export default function ChanganTrackerContent() {
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [sendModalItem, setSendModalItem] = useState<StockItem | null>(null);
+  const [sendForm, setSendForm] = useState({ title: 'Mr', name: '', email: '', mobile: '' });
+  const [sending, setSending] = useState(false);
 
   const upsertTracking = useCallback(async (item: StockItem, stage: number): Promise<TrackingRecord> => {
     const stockId = item.metadata?.stockId;
@@ -132,6 +136,59 @@ export default function ChanganTrackerContent() {
     }
   };
 
+  const openSendModal = (item: StockItem) => {
+    setSendModalItem(item);
+    setSendForm({ title: 'Mr', name: '', email: '', mobile: '' });
+  };
+
+  const closeSendModal = () => {
+    setSendModalItem(null);
+    setSendForm({ title: 'Mr', name: '', email: '', mobile: '' });
+  };
+
+  const handleSendTrackLink = async () => {
+    if (!sendModalItem || !user?.token) return;
+    const stockId = sendModalItem.metadata?.stockId;
+    if (!stockId) return;
+    if (!sendForm.name.trim() || (!sendForm.email && !sendForm.mobile)) {
+      showToast('Please enter customer name and email or mobile', 'error');
+      return;
+    }
+
+    setSending(true);
+    try {
+      const trackLink = `${window.location.origin}/track/${stockId}`;
+      const payload: Record<string, unknown> = {
+        trackLink,
+        stockId,
+        customerName: sendForm.name,
+        customerTitle: sendForm.title,
+        vehicleDetails: {
+          make: sendModalItem.vehicle?.make,
+          model: sendModalItem.vehicle?.model,
+          registration: sendModalItem.vehicle?.registration,
+        },
+      };
+      if (sendForm.email) payload.email = sendForm.email;
+      if (sendForm.mobile) payload.mobile = sendForm.mobile.replace(/\D/g, '');
+
+      const res = await fetch('/api/vehicle-tracking/send-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user.token}` },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((data as { message?: string }).message || 'Failed to send link');
+
+      showToast('Tracking link sent successfully!', 'success');
+      closeSendModal();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to send tracking link', 'error');
+    } finally {
+      setSending(false);
+    }
+  };
+
   const sortedStock = useMemo(
     () => [...stock].sort((a, b) => (a.vehicle?.model || '').localeCompare(b.vehicle?.model || '')),
     [stock]
@@ -223,6 +280,14 @@ export default function ChanganTrackerContent() {
                       {copiedId === stockId ? <FaCheck size={11} /> : <FaLink size={11} />}
                       {copiedId === stockId ? 'Copied' : 'Copy Track Link'}
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => openSendModal(item)}
+                      className="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-semibold hover:bg-emerald-100 transition"
+                    >
+                      <FaPaperPlane size={11} />
+                      Send to Customer
+                    </button>
                     <a
                       href={`/track/${stockId}`}
                       target="_blank"
@@ -262,6 +327,83 @@ export default function ChanganTrackerContent() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {sendModalItem && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 sm:p-4 p-0">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md overflow-hidden animate-fade-in max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+              <div>
+                <h3 className="text-xl font-bold text-gray-800">Send Tracking Link</h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {sendModalItem.vehicle?.make} {sendModalItem.vehicle?.model}
+                </p>
+              </div>
+              <button type="button" onClick={closeSendModal} className="text-gray-400 hover:text-gray-600 transition">
+                <FaTimes size={18} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-4 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                  <select
+                    value={sendForm.title}
+                    onChange={(e) => setSendForm((p) => ({ ...p, title: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="Mr">Mr</option>
+                    <option value="Mrs">Mrs</option>
+                    <option value="Miss">Miss</option>
+                    <option value="Ms">Ms</option>
+                    <option value="Dr">Dr</option>
+                  </select>
+                </div>
+                <div className="col-span-3">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
+                  <input
+                    type="text"
+                    value={sendForm.name}
+                    onChange={(e) => setSendForm((p) => ({ ...p, name: e.target.value }))}
+                    placeholder="John Smith"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                <input
+                  type="email"
+                  value={sendForm.email}
+                  onChange={(e) => setSendForm((p) => ({ ...p, email: e.target.value }))}
+                  placeholder="customer@example.com"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Mobile Number</label>
+                <UKPhoneInput value={sendForm.mobile} onChange={(v) => setSendForm((p) => ({ ...p, mobile: v }))} />
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={closeSendModal}
+                  className="flex-1 px-4 py-2 border border-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSendTrackLink}
+                  disabled={sending || (!sendForm.email && !sendForm.mobile)}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition shadow-sm disabled:opacity-50"
+                >
+                  {sending ? 'Sending...' : 'Send Link'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
