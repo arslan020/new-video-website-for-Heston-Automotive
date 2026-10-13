@@ -7,7 +7,7 @@ import { ToastProvider } from '@/components/ToastProvider';
 const inter = Inter({ variable: '--font-inter', subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Heston Automotive – Video Portal',
+  title: 'Heston Automotive | Video Portal',
   description: 'Car video management portal',
 };
 
