@@ -22,6 +22,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     user.email = body.email || user.email;
     user.phoneNumber = body.phoneNumber || user.phoneNumber;
     if (body.isTwoFactorEnabled !== undefined) user.isTwoFactorEnabled = body.isTwoFactorEnabled;
+    if (body.canViewCustomerViews !== undefined) user.canViewCustomerViews = body.canViewCustomerViews;
     if (body.password) user.password = body.password;
 
     const updated = await user.save();
@@ -34,6 +35,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       phoneNumber: updated.phoneNumber,
       role: updated.role,
       isTwoFactorEnabled: updated.isTwoFactorEnabled,
+      canViewCustomerViews: updated.canViewCustomerViews,
     });
   } catch (err) {
     console.error(err);

@@ -25,6 +25,7 @@ interface StaffMember {
   email: string;
   phoneNumber: string;
   isTwoFactorEnabled: boolean;
+  canViewCustomerViews?: boolean;
   role: string;
 }
 
@@ -35,6 +36,7 @@ interface FormData {
   phoneNumber: string;
   password: string;
   isTwoFactorEnabled: boolean;
+  canViewCustomerViews: boolean;
 }
 
 export default function ManageStaffPage() {
@@ -63,6 +65,7 @@ function ManageStaffContent() {
     phoneNumber: '',
     password: '',
     isTwoFactorEnabled: false,
+    canViewCustomerViews: true,
   });
 
   const [resetPasswordModal, setResetPasswordModal] = useState<StaffMember | null>(null);
@@ -103,6 +106,7 @@ function ManageStaffContent() {
         phoneNumber: member.phoneNumber ? member.phoneNumber.replace('+44', '').replace(/^0/, '') : '',
         password: '',
         isTwoFactorEnabled: member.isTwoFactorEnabled || false,
+        canViewCustomerViews: member.canViewCustomerViews !== false,
       });
     } else {
       setEditingMember(null);
@@ -113,6 +117,7 @@ function ManageStaffContent() {
         phoneNumber: '',
         password: '',
         isTwoFactorEnabled: false,
+        canViewCustomerViews: true,
       });
     }
     setShowModal(true);
@@ -546,6 +551,22 @@ function ManageStaffContent() {
                   <p className="text-sm font-medium text-blue-900">Enable Two-Factor Authentication</p>
                   <p className="text-xs text-blue-700 mt-0.5">
                     User will be required to verify their email on every login.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 p-4 bg-indigo-50 rounded-xl border border-indigo-100">
+                <input
+                  type="checkbox"
+                  name="canViewCustomerViews"
+                  checked={formData.canViewCustomerViews}
+                  onChange={handleInputChange}
+                  className="mt-1 w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300"
+                />
+                <div>
+                  <p className="text-sm font-medium text-indigo-900">Allow Customer Views access</p>
+                  <p className="text-xs text-indigo-700 mt-0.5">
+                    Lets this staff member see who viewed shared video links (names, contact details, timestamps).
                   </p>
                 </div>
               </div>

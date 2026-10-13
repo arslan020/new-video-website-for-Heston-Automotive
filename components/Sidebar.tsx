@@ -6,6 +6,7 @@ import { FaHome, FaVideo, FaCar, FaCog, FaUsersCog, FaHistory, FaEye } from 'rea
 
 interface SidebarProps {
   role: 'admin' | 'staff';
+  canViewCustomerViews?: boolean;
 }
 
 const adminMenu = [
@@ -26,9 +27,11 @@ const staffMenu = [
   { icon: FaCog, label: 'Settings', path: '/staff/settings' },
 ];
 
-export default function Sidebar({ role }: SidebarProps) {
+export default function Sidebar({ role, canViewCustomerViews = true }: SidebarProps) {
   const pathname = usePathname();
-  const menu = role === 'admin' ? adminMenu : staffMenu;
+  const menu = (role === 'admin' ? adminMenu : staffMenu).filter(
+    (item) => canViewCustomerViews || item.path !== '/staff/views'
+  );
 
   return (
     <div className="w-64 bg-white border-r border-gray-200 text-gray-600 flex flex-col min-h-screen transition-all duration-300">

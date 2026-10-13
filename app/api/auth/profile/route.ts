@@ -65,6 +65,8 @@ export async function PUT(req: NextRequest) {
       email: updated!.email,
       phoneNumber: updated!.phoneNumber,
       role: updated!.role,
+      isTwoFactorEnabled: updated!.isTwoFactorEnabled,
+      canViewCustomerViews: updated!.canViewCustomerViews,
       token: signToken(updated!._id.toString()),
       message: 'Profile updated successfully',
     });

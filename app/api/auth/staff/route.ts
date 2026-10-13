@@ -21,14 +21,22 @@ export async function POST(req: NextRequest) {
 
   try {
     await connectDB();
-    const { username, name, password, email, phoneNumber } = await req.json();
+    const { username, name, password, email, phoneNumber, canViewCustomerViews } = await req.json();
 
     const userExists = await User.findOne({ $or: [{ username }, { email }] });
     if (userExists) {
       return Response.json({ message: 'User or Email already exists' }, { status: 400 });
     }
 
-    const newUser = await User.create({ username, name, password, email, phoneNumber, role: 'staff' });
+    const newUser = await User.create({
+      username,
+      name,
+      password,
+      email,
+      phoneNumber,
+      role: 'staff',
+      canViewCustomerViews: canViewCustomerViews !== undefined ? canViewCustomerViews : true,
+    });
 
     const frontendUrl = process.env.FRONTEND_URL || 'https://video.hestonautomotive.com';
     try {

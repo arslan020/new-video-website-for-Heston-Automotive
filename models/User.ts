@@ -9,6 +9,7 @@ export interface IUser extends Document {
   email: string;
   phoneNumber: string;
   role: 'admin' | 'staff';
+  canViewCustomerViews: boolean;
   resetPasswordToken?: string;
   resetPasswordExpire?: Date;
   isTwoFactorEnabled: boolean;
@@ -28,6 +29,7 @@ const userSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true },
     phoneNumber: { type: String, required: true },
     role: { type: String, enum: ['admin', 'staff'], default: 'staff' },
+    canViewCustomerViews: { type: Boolean, default: true },
     resetPasswordToken: String,
     resetPasswordExpire: Date,
     isTwoFactorEnabled: { type: Boolean, default: false },

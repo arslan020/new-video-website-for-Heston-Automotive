@@ -10,6 +10,7 @@ interface UserData {
   phoneNumber: string;
   role: 'admin' | 'staff';
   isTwoFactorEnabled: boolean;
+  canViewCustomerViews?: boolean;
   token: string;
 }
 

@@ -49,7 +49,14 @@ export async function GET(req: NextRequest) {
       .populate({ path: 'views.shareId', select: 'suspended createdAt metadata user', populate: { path: 'user', select: 'name username' } })
       .sort({ createdAt: -1 });
 
-    return Response.json(videos);
+    const canSeeViews = user.role === 'admin' || user.canViewCustomerViews;
+    if (canSeeViews) return Response.json(videos);
+
+    const sanitized = videos.map((video) => {
+      const { views: _views, ...rest } = video.toObject();
+      return rest;
+    });
+    return Response.json(sanitized);
   } catch (err) {
     console.error(err);
     return Response.json({ message: 'Failed to fetch videos' }, { status: 500 });

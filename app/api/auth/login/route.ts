@@ -56,6 +56,7 @@ export async function POST(req: NextRequest) {
       phoneNumber: user.phoneNumber,
       role: user.role,
       isTwoFactorEnabled: user.isTwoFactorEnabled,
+      canViewCustomerViews: user.canViewCustomerViews,
       token: signToken(user._id.toString()),
     });
   } catch (err) {

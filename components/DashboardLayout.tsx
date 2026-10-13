@@ -24,7 +24,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="flex min-h-screen bg-gray-100 font-sans relative">
       {/* Sidebar (Fixed) */}
       <div className={`fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <Sidebar role={user.role} />
+        <Sidebar role={user.role} canViewCustomerViews={user.canViewCustomerViews !== false} />
       </div>
 
       {/* Overlay for mobile */}
