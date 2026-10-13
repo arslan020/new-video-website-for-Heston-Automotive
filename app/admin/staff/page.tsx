@@ -147,8 +147,8 @@ function ManageStaffContent() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Error processing request');
 
+      await fetchStaff();
       closeModal();
-      fetchStaff();
     } catch (error: unknown) {
       alert(error instanceof Error ? error.message : 'Error processing request');
     } finally {
