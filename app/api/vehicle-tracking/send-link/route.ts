@@ -32,7 +32,8 @@ export async function POST(req: NextRequest) {
 
     if (email) {
       try {
-        const logoUrl = 'https://video.hestonautomotive.com/business-logo.webp';
+        // PNG, not webp — some email clients (e.g. Gmail) render the webp logo as a broken black box.
+        const logoUrl = 'https://video.hestonautomotive.com/business-logo-email.png';
         const year = new Date().getFullYear();
 
         await sendEmail({
