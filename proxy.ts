@@ -3,6 +3,7 @@ import { verifyTokenEdge } from '@/lib/jwt-edge';
 
 const PUBLIC_API_PATHS = [
   '/api/auth/login',
+  '/api/auth/verify-2fa',
   '/api/auth/forgot-password',
   '/api/auth/reset-password',
   '/api/magic-links',
