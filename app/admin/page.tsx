@@ -62,11 +62,14 @@ const AdminDashboard = () => {
 
             const videoRes = await fetch('/api/videos', { headers });
             const videoData = await videoRes.json();
+            const activeVideoCount = Array.isArray(videoData)
+                ? videoData.filter((v: { deletedAt?: string }) => !v.deletedAt).length
+                : 0;
 
             setStats({
                 staffCount: staffData.length,
                 stockCount: stockCount,
-                videoCount: videoData.length
+                videoCount: activeVideoCount
             });
 
             const chartRes = await fetch('/api/audit-logs/weekly-stats', { headers });

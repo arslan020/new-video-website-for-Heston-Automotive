@@ -17,6 +17,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const video = await Video.findById(id);
     if (!video) return Response.json({ message: 'Video not found' }, { status: 404 });
+    if (video.deletedAt && !isStaff) {
+      return Response.json({ message: 'Video not found' }, { status: 404 });
+    }
 
     if (!isStaff) {
       if (shareId && shareId !== 'undefined' && shareId !== 'null') {

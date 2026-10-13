@@ -49,6 +49,7 @@ interface Video {
   make?: string;
   model?: string;
   uploadedBy?: { name?: string; username?: string };
+  deletedAt?: string;
 }
 
 export default function AdminStockPage() {
@@ -176,6 +177,7 @@ function AdminStockContent() {
     if (!stockReg) return [];
 
     return videos.filter(video => {
+      if (video.deletedAt) return false;
       if (video.registration) {
         return video.registration.replace(/\s/g, '').toUpperCase() === stockReg;
       }
