@@ -2,19 +2,6 @@
 
 import { useEffect, useState } from 'react';
 
-const SPARKLES = Array.from({ length: 48 }, (_, i) => {
-  const col = i % 8;
-  const row = Math.floor(i / 8);
-  return {
-    i,
-    left: 16 + col * 9.2 + ((i * 13) % 6),
-    top: 24 + row * 8.4 + ((i * 17) % 5),
-    size: i % 6 === 0 ? 3.4 : 1.5 + (i % 3) * 0.7,
-    delay: Number(((i * 0.19) % 2.6).toFixed(2)),
-    duration: Number((1.05 + (i % 7) * 0.18).toFixed(2)),
-  };
-});
-
 export default function CarStepReveal({
   src,
   alt,
@@ -59,6 +46,7 @@ export default function CarStepReveal({
   }, [src]);
 
   const edge = (bounds.left + (bounds.right - bounds.left) * (Math.min(progress, 100) / 100)) * 100;
+  const span = Math.max(bounds.right * 100 - edge, 1);
   const done = progress >= 99.6;
   const mask = `linear-gradient(to right, transparent ${edge.toFixed(2)}%, #000 calc(${edge.toFixed(2)}% + 1.6%)), url("${src}")`;
 
@@ -80,20 +68,26 @@ export default function CarStepReveal({
             maskComposite: 'intersect',
           }}
         >
-          {SPARKLES.map((spark) => (
-            <span
-              key={spark.i}
-              className="car-sparkle"
-              style={{
-                left: `${spark.left}%`,
-                top: `${spark.top}%`,
-                width: spark.size,
-                height: spark.size,
-                animationDelay: `${spark.delay}s`,
-                animationDuration: `${spark.duration}s`,
-              }}
-            />
-          ))}
+          <div
+            className="car-sheen-track"
+            style={{
+              left: `${edge}%`,
+              width: `${span}%`,
+              ['--span-num' as string]: String(span / 100),
+              ['--sheen-half' as string]: `${1250 / span}%`,
+            }}
+          >
+            <div className="car-sheen-strip">
+              <span />
+              <span />
+              <span />
+              <span />
+              <span />
+              <span />
+              <span />
+              <span />
+            </div>
+          </div>
         </div>
       )}
     </div>

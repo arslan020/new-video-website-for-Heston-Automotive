@@ -529,25 +529,58 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .track-bar::after { animation: none; opacity: 0; }
-  .car-sparkle { animation: none; opacity: 0.55; }
+  .track-bar::after,
+  .car-sheen-strip { animation: none; }
 }
 
 .car-reveal-frost {
-  background: #111111;
+  background: rgba(214, 218, 224, 0.9);
+  overflow: hidden;
 }
 
-.car-sparkle {
+.car-sheen-track {
   position: absolute;
-  border-radius: 999px;
-  background: #fff;
-  box-shadow: 0 0 5px 1px rgba(255, 255, 255, 0.8);
-  animation: car-sparkle ease-in-out infinite;
+  top: 0;
+  bottom: 0;
+  overflow: hidden;
 }
 
-@keyframes car-sparkle {
-  0%, 100% { opacity: 0; transform: scale(0.35); }
-  18% { opacity: 1; transform: scale(1); }
-  48% { opacity: 0.9; transform: scale(0.85); }
-  78% { opacity: 0; transform: scale(0.3); }
+.car-sheen-strip {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 200%;
+  animation: car-sheen-pass 2.1s linear infinite;
+}
+
+.car-sheen-strip span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: calc(100% * 0.25 / var(--span-num));
+  background-image: linear-gradient(
+    100deg,
+    transparent 0%,
+    transparent 34%,
+    rgba(255, 255, 255, 0.28) 43%,
+    rgba(255, 255, 255, 0.95) 50%,
+    rgba(255, 255, 255, 0.28) 57%,
+    transparent 66%,
+    transparent 100%
+  );
+}
+
+.car-sheen-strip span:nth-child(1) { left: calc(-62.5% - var(--sheen-half)); }
+.car-sheen-strip span:nth-child(2) { left: calc(-37.5% - var(--sheen-half)); }
+.car-sheen-strip span:nth-child(3) { left: calc(-12.5% - var(--sheen-half)); }
+.car-sheen-strip span:nth-child(4) { left: calc(12.5% - var(--sheen-half)); }
+.car-sheen-strip span:nth-child(5) { left: calc(37.5% - var(--sheen-half)); }
+.car-sheen-strip span:nth-child(6) { left: calc(62.5% - var(--sheen-half)); }
+.car-sheen-strip span:nth-child(7) { left: calc(87.5% - var(--sheen-half)); }
+.car-sheen-strip span:nth-child(8) { left: calc(112.5% - var(--sheen-half)); }
+
+@keyframes car-sheen-pass {
+  from { transform: translateX(-25%); }
+  to { transform: translateX(0); }
 }
