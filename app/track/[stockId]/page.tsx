@@ -1,10 +1,33 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
-import { FaCheck, FaCar, FaCheckCircle } from 'react-icons/fa';
+import {
+  FaCar,
+  FaCheck,
+  FaClipboardCheck,
+  FaFileInvoiceDollar,
+  FaHandshake,
+  FaKey,
+  FaShieldAlt,
+  FaShippingFast,
+  FaWarehouse,
+  FaWrench,
+} from 'react-icons/fa';
+import type { IconType } from 'react-icons';
 import { TRACKING_STAGE_DESCRIPTIONS } from '@/lib/trackingStages';
 import { findExteriorColour } from '@/lib/exteriorColours';
+
+const STAGE_ICONS: IconType[] = [
+  FaClipboardCheck,
+  FaShippingFast,
+  FaWarehouse,
+  FaFileInvoiceDollar,
+  FaWrench,
+  FaShieldAlt,
+  FaKey,
+  FaHandshake,
+];
 
 interface StageRemark {
   stage: number;
@@ -37,6 +60,8 @@ export default function VehicleTrackingPage() {
   const [notFound, setNotFound] = useState(false);
   const [replyDrafts, setReplyDrafts] = useState<Record<number, string>>({});
   const [sendingReplyStage, setSendingReplyStage] = useState<number | null>(null);
+  const [barReady, setBarReady] = useState(false);
+  const barStarted = useRef(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -66,6 +91,13 @@ export default function VehicleTrackingPage() {
     };
   }, [stockId]);
 
+  useEffect(() => {
+    if (!data || barStarted.current) return;
+    barStarted.current = true;
+    const id = requestAnimationFrame(() => setBarReady(true));
+    return () => cancelAnimationFrame(id);
+  }, [data]);
+
   const handleSendReply = async (stage: number) => {
     const reply = (replyDrafts[stage] || '').trim();
     if (!reply) return;
@@ -94,8 +126,8 @@ export default function VehicleTrackingPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-pulse text-blue-800 font-semibold">Loading status...</div>
+      <div className="min-h-screen flex items-center justify-center bg-[#f4f7fb]">
+        <div className="animate-pulse font-semibold text-[#0b457f]">Loading status...</div>
       </div>
     );
   }
@@ -111,8 +143,8 @@ export default function VehicleTrackingPage() {
           We couldn&apos;t find a tracking status for this vehicle. Call the Heathrow showroom and we&apos;ll update you.
         </p>
         <div className="mt-8 flex flex-col gap-3 w-full max-w-xs">
-          <a href="tel:+442085648030" className="bg-blue-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-blue-700 transition shadow-lg">Call 020 8564 8030</a>
-          <a href="mailto:changan@hestonautomotive.com" className="bg-white text-gray-700 border border-gray-200 px-6 py-3 rounded-lg font-bold hover:bg-gray-50 transition">Email Us</a>
+          <a href="tel:+442085648030" className="bg-[#0b457f] text-white px-6 py-3 font-bold tracking-wide hover:bg-[#083460] transition">Call 020 8564 8030</a>
+          <a href="mailto:changan@hestonautomotive.com" className="bg-white text-[#282828] border border-[#d2d2d2] px-6 py-3 font-bold tracking-wide hover:bg-[#f4f7fb] transition">Email Us</a>
         </div>
       </div>
     );
@@ -125,7 +157,7 @@ export default function VehicleTrackingPage() {
   const progress = data.stages.length <= 1 ? 100 : Math.round((data.currentStage / (data.stages.length - 1)) * 100);
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa] flex flex-col font-sans">
+    <div className="min-h-screen bg-[#f4f7fb] flex flex-col font-sans">
       <header className="bg-white shadow-sm py-3 px-4 flex justify-center sticky top-0 z-30">
         <img src="/business-logo.webp" alt="Changan Heston Automotive" className="h-6 sm:h-8 md:h-9 object-contain max-w-full" />
       </header>
@@ -177,94 +209,95 @@ export default function VehicleTrackingPage() {
             </div>
           )}
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-8">
-            <div className="flex items-center justify-between mb-5">
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Order Progress</p>
-              <p className="text-xs font-medium text-gray-400">
+          <div className="bg-white rounded-2xl shadow-[0_8px_30px_rgba(11,69,127,0.06)] px-5 py-6 sm:px-8 sm:py-8">
+            <div className="flex items-end justify-between mb-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#0b457f]">Order Progress</p>
+              <p className="text-xs text-[#505050]">
                 Stage {data.currentStage + 1} of {data.stages.length}
               </p>
             </div>
-            <div className="h-1.5 w-full bg-gray-100 rounded-full mb-8">
-              <div className="h-full bg-blue-600 rounded-full transition-all" style={{ width: `${progress}%` }} />
+            <div className="h-1 w-full bg-[#e7eef5] rounded-full mb-8 overflow-hidden">
+              <div
+                className="h-full bg-[#0b457f] rounded-full transition-[width] duration-1000 ease-out"
+                style={{ width: barReady ? `${progress}%` : '0%' }}
+              />
             </div>
 
-            <ol className="relative">
+            <ol>
               {data.stages.map((label, idx) => {
                 const isDone = idx < data.currentStage;
                 const isCurrent = idx === data.currentStage;
                 const isLast = idx === data.stages.length - 1;
                 const remark = data.remarks?.find((r) => r.stage === idx);
+                const Icon = STAGE_ICONS[idx] || FaCar;
                 return (
-                  <li key={label} className="relative pb-8 last:pb-0">
+                  <li
+                    key={label}
+                    className="track-step relative flex gap-4 pb-7 last:pb-0"
+                    style={{ animationDelay: `${idx * 70}ms` }}
+                  >
                     {!isLast && (
                       <span
-                        className={`absolute left-[15px] top-8 w-0.5 h-full ${
-                          isDone ? 'bg-emerald-400' : 'bg-gray-200'
+                        className={`absolute left-5 top-11 bottom-0 w-px -translate-x-1/2 ${
+                          isDone ? 'bg-[#0b457f]' : 'bg-[#e2e6ea]'
                         }`}
                       />
                     )}
-                    <div className="flex items-start gap-4">
-                      <span
-                        className={`relative z-10 flex items-center justify-center w-8 h-8 rounded-full border-2 flex-shrink-0 ${
-                          isDone
-                            ? 'bg-emerald-500 border-emerald-500 text-white'
-                            : isCurrent
-                            ? 'bg-blue-600 border-blue-600 text-white animate-pulse'
-                            : 'bg-white border-gray-300 text-gray-300'
+                    <span
+                      className={`relative z-10 flex h-10 w-10 items-center justify-center rounded-full flex-shrink-0 ${
+                        isDone
+                          ? 'bg-[#0b457f] text-white'
+                          : isCurrent
+                          ? 'track-current-icon bg-[#0b457f] text-white'
+                          : 'bg-[#f4f7fb] text-[#a0a0a0]'
+                      }`}
+                    >
+                      {isDone ? <FaCheck size={13} /> : <Icon size={15} />}
+                    </span>
+                    <div className="min-w-0 pt-2">
+                      <p
+                        className={`font-semibold text-sm sm:text-[15px] leading-snug ${
+                          isCurrent ? 'text-[#0b457f]' : isDone ? 'text-[#282828]' : 'text-[#a0a0a0]'
                         }`}
                       >
-                        {isDone ? <FaCheck size={12} /> : <span className="text-xs font-bold">{idx + 1}</span>}
-                      </span>
-                      <div className="pt-0.5">
-                        <p
-                          className={`font-semibold text-sm sm:text-base ${
-                            isCurrent ? 'text-blue-700' : isDone ? 'text-gray-700' : 'text-gray-400'
-                          }`}
-                        >
-                          {label}
+                        {label}
+                      </p>
+                      {isCurrent && (
+                        <p className="mt-1 text-sm text-[#505050] leading-relaxed">
+                          {TRACKING_STAGE_DESCRIPTIONS[idx]}
                         </p>
-                        {isCurrent && (
-                          <>
-                            <p className="mt-1 text-sm text-gray-500 leading-relaxed">
-                              {TRACKING_STAGE_DESCRIPTIONS[idx]}
+                      )}
+
+                      {remark && (
+                        <div className="mt-2.5 max-w-md border-l-2 border-[#0b457f] pl-3">
+                          <p className="text-sm text-[#282828]">{remark.text}</p>
+
+                          {remark.customerReply ? (
+                            <p className="mt-1.5 text-sm text-[#505050]">
+                              <span className="font-medium text-[#282828]">You: </span>
+                              {remark.customerReply}
                             </p>
-                            <span className="inline-block mt-2 px-2 py-0.5 bg-blue-50 text-blue-600 text-xs font-semibold rounded-full border border-blue-100">
-                              Current Stage
-                            </span>
-                          </>
-                        )}
-
-                        {remark && (
-                          <div className="mt-3 bg-blue-50 border border-blue-100 rounded-lg p-3 max-w-md">
-                            <p className="text-sm text-gray-700">{remark.text}</p>
-
-                            {remark.customerReply ? (
-                              <div className="mt-2 pt-2 border-t border-blue-100">
-                                <p className="text-xs font-semibold text-gray-500 mb-0.5">Your reply</p>
-                                <p className="text-sm text-gray-700">{remark.customerReply}</p>
-                              </div>
-                            ) : (
-                              <div className="mt-2 flex gap-2">
-                                <input
-                                  type="text"
-                                  value={replyDrafts[idx] || ''}
-                                  onChange={(e) => setReplyDrafts((prev) => ({ ...prev, [idx]: e.target.value }))}
-                                  placeholder="Type a reply..."
-                                  className="flex-1 min-w-0 px-2.5 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => handleSendReply(idx)}
-                                  disabled={sendingReplyStage === idx || !(replyDrafts[idx] || '').trim()}
-                                  className="px-3 py-1.5 text-sm font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 transition disabled:opacity-50 flex-shrink-0"
-                                >
-                                  {sendingReplyStage === idx ? '...' : 'Reply'}
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
+                          ) : (
+                            <div className="mt-2 flex gap-2">
+                              <input
+                                type="text"
+                                value={replyDrafts[idx] || ''}
+                                onChange={(e) => setReplyDrafts((prev) => ({ ...prev, [idx]: e.target.value }))}
+                                placeholder="Write a reply"
+                                className="flex-1 min-w-0 bg-transparent border-b border-[#d2d2d2] px-0 py-1.5 text-sm focus:outline-none focus:border-[#0b457f]"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleSendReply(idx)}
+                                disabled={sendingReplyStage === idx || !(replyDrafts[idx] || '').trim()}
+                                className="text-xs font-semibold uppercase tracking-wide text-[#0b457f] disabled:opacity-40"
+                              >
+                                {sendingReplyStage === idx ? '...' : 'Reply'}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </li>
                 );
@@ -273,34 +306,24 @@ export default function VehicleTrackingPage() {
           </div>
 
           {data.currentStage === readyIndex && (
-            <div className="mt-5 sm:mt-6 bg-emerald-50 border border-emerald-200 rounded-xl p-4 sm:p-5 flex items-start gap-3">
-              <FaCheckCircle className="text-emerald-500 mt-0.5 flex-shrink-0" size={20} />
-              <div>
-                <p className="font-bold text-emerald-800 text-sm sm:text-base">Ready for collection! 🎉</p>
-                <p className="text-sm text-emerald-700 mt-0.5">
-                  Your {vehicleName} is ready. We&apos;ll be in touch to arrange a time at Changan Heathrow.
-                </p>
-              </div>
-            </div>
+            <p className="mt-5 text-sm text-[#505050] text-center">
+              <span className="font-semibold text-[#0b457f]">Ready for collection.</span>{' '}
+              Your {vehicleName} is ready. We&apos;ll be in touch to arrange a time at Changan Heathrow.
+            </p>
           )}
 
           {data.currentStage === handoverIndex && (
-            <div className="mt-5 sm:mt-6 bg-emerald-50 border border-emerald-200 rounded-xl p-4 sm:p-5 flex items-start gap-3">
-              <FaCheckCircle className="text-emerald-500 mt-0.5 flex-shrink-0" size={20} />
-              <div>
-                <p className="font-bold text-emerald-800 text-sm sm:text-base">Handover complete! 🎉</p>
-                <p className="text-sm text-emerald-700 mt-0.5">
-                  Congratulations on your new {vehicleName}. Thank you for choosing Changan Heathrow.
-                </p>
-              </div>
-            </div>
+            <p className="mt-5 text-sm text-[#505050] text-center">
+              <span className="font-semibold text-[#0b457f]">Handover complete.</span>{' '}
+              Congratulations on your new {vehicleName}. Thank you for choosing Changan Heathrow.
+            </p>
           )}
 
-          <p className="text-center text-xs text-gray-400 mt-6">
+          <p className="text-center text-xs text-[#a0a0a0] mt-6">
             Last updated {new Date(data.updatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-            {' · '}Questions? Call <a href="tel:+442085648030" className="text-blue-600 hover:underline">020 8564 8030</a>
+            {' · '}Questions? Call <a href="tel:+442085648030" className="text-[#0b457f] hover:underline">020 8564 8030</a>
             {' · '}
-            <a href="mailto:changan@hestonautomotive.com" className="text-blue-600 hover:underline">changan@hestonautomotive.com</a>
+            <a href="mailto:changan@hestonautomotive.com" className="text-[#0b457f] hover:underline">changan@hestonautomotive.com</a>
           </p>
         </div>
       </main>
