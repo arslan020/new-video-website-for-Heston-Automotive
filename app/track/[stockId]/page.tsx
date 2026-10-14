@@ -17,6 +17,7 @@ import {
 import type { IconType } from 'react-icons';
 import { TRACKING_STAGE_DESCRIPTIONS } from '@/lib/trackingStages';
 import { findExteriorColour } from '@/lib/exteriorColours';
+import CarStepReveal from '@/components/CarStepReveal';
 
 const STAGE_ICONS: IconType[] = [
   FaClipboardCheck,
@@ -189,10 +190,10 @@ export default function VehicleTrackingPage() {
         <div className="w-full max-w-2xl">
           {exterior ? (
             <div className="mb-2 px-4 py-6 sm:px-8 sm:py-8">
-              <img
+              <CarStepReveal
                 src={exterior.image}
                 alt={`${vehicleName} in ${exterior.name}`}
-                className="mx-auto w-full max-w-lg object-contain"
+                progress={shownProgress}
               />
             </div>
           ) : null}
