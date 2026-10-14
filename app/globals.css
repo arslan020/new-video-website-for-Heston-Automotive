@@ -463,6 +463,34 @@ body {
   height: 300px;
 }
 
+@font-face {
+  font-family: changanUniType;
+  src: url('/fonts/ChangAnunitype-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: changanUniType;
+  src: url('/fonts/ChangAnunitype-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+.font-changan {
+  font-family: changanUniType, 'Noto Sans', system-ui, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+.gradient-changan {
+  background-color: #0b457f;
+  background-image:
+    radial-gradient(ellipse 45% 200px at 50% 100%, color-mix(in srgb, #b3cfe4 1%, transparent) 0%, transparent 65%),
+    radial-gradient(ellipse 85% 300px at 50% 100%, color-mix(in srgb, #708ec9 1%, transparent) 0%, color-mix(in srgb, #708ec9 1%, transparent) 40%, transparent 75%);
+}
+
 @keyframes track-step-in {
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: none; }
@@ -480,4 +508,26 @@ body {
 
 .track-current-icon {
   animation: track-ring 1.8s ease-out infinite;
+}
+
+.track-bar {
+  background: linear-gradient(90deg, #083460 0%, #0b457f 62%, #6f9cc4 100%);
+}
+
+.track-bar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+  transform: translateX(-120%);
+  animation: track-sheen 2.4s ease-in-out infinite;
+}
+
+@keyframes track-sheen {
+  0% { transform: translateX(-120%); }
+  55%, 100% { transform: translateX(240%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track-bar::after { animation: none; opacity: 0; }
 }

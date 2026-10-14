@@ -61,8 +61,9 @@ export default function VehicleTrackingPage() {
   const [notFound, setNotFound] = useState(false);
   const [replyDrafts, setReplyDrafts] = useState<Record<number, string>>({});
   const [sendingReplyStage, setSendingReplyStage] = useState<number | null>(null);
-  const [barReady, setBarReady] = useState(false);
-  const barStarted = useRef(false);
+  const [shownProgress, setShownProgress] = useState(0);
+  const shownRef = useRef(0);
+  const barFrame = useRef(0);
 
   useEffect(() => {
     let isMounted = true;
@@ -93,10 +94,29 @@ export default function VehicleTrackingPage() {
   }, [stockId]);
 
   useEffect(() => {
-    if (!data || barStarted.current) return;
-    barStarted.current = true;
-    const id = requestAnimationFrame(() => setBarReady(true));
-    return () => cancelAnimationFrame(id);
+    if (!data) return;
+    const to = data.stages.length <= 1 ? 100 : (data.currentStage / (data.stages.length - 1)) * 100;
+    const from = shownRef.current;
+    if (Math.abs(to - from) < 0.4) return;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    cancelAnimationFrame(barFrame.current);
+    if (reduce) {
+      shownRef.current = to;
+      setShownProgress(to);
+      return;
+    }
+    const start = performance.now();
+    const duration = 1200;
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 3);
+      const value = from + (to - from) * eased;
+      shownRef.current = value;
+      setShownProgress(value);
+      if (t < 1) barFrame.current = requestAnimationFrame(tick);
+    };
+    barFrame.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(barFrame.current);
   }, [data]);
 
   const handleSendReply = async (stage: number) => {
@@ -156,18 +176,19 @@ export default function VehicleTrackingPage() {
   const exterior = findExteriorColour(data.model, data.derivative, data.colour);
   const readyIndex = data.stages.length - 2;
   const handoverIndex = data.stages.length - 1;
-  const progress = data.stages.length <= 1 ? 100 : Math.round((data.currentStage / (data.stages.length - 1)) * 100);
 
   return (
-    <div className="min-h-screen bg-[#f4f7fb] flex flex-col font-sans">
-      <header className="bg-white shadow-sm py-3 px-4 flex justify-center sticky top-0 z-30">
-        <img src="/business-logo.webp" alt="Changan Heston Automotive" className="h-6 sm:h-8 md:h-9 object-contain max-w-full" />
+    <div className="min-h-screen bg-[#eef3f6] flex flex-col">
+      <header className="gradient-changan px-6 py-10 sm:px-8">
+        <a href="https://www.changanheathrow.co.uk/" className="mx-auto flex w-full max-w-xs items-center justify-center sm:max-w-sm">
+          <img src="/heston-changan-logo-light.png" alt="Changan Heathrow" className="h-auto w-full object-contain" />
+        </a>
       </header>
 
       <main className="flex-1 flex flex-col items-center px-3 py-4 sm:px-4 sm:py-6 md:p-8">
         <div className="w-full max-w-2xl">
           {exterior ? (
-            <div className="bg-[#f4f7fb] rounded-xl mb-6 px-4 py-6 sm:px-8 sm:py-8">
+            <div className="mb-2 px-4 py-6 sm:px-8 sm:py-8">
               <img
                 src={exterior.image}
                 alt={`${vehicleName} in ${exterior.name}`}
@@ -177,10 +198,10 @@ export default function VehicleTrackingPage() {
           ) : null}
 
           <div className="text-center mb-6 sm:mb-8">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#282828] mb-1 sm:mb-2">
+            <h1 className="font-changan text-2xl font-normal text-[#282828] sm:text-3xl lg:text-4xl mb-1 sm:mb-2">
               {customerName ? `Hello, ${customerName}` : `Your ${vehicleName}`}
             </h1>
-            <p className="text-sm sm:text-base text-[#505050]">
+            <p className="mt-3 text-sm text-[#505050] sm:text-base">
               {customerName ? `Your ${vehicleName}. ` : ''}
               Follow your car from order through to handover at Changan Heathrow.
             </p>
@@ -213,17 +234,24 @@ export default function VehicleTrackingPage() {
           )}
 
           <div className="bg-white rounded-2xl shadow-[0_8px_30px_rgba(11,69,127,0.06)] px-5 py-6 sm:px-8 sm:py-8">
-            <div className="flex items-end justify-between mb-4">
+            <div className="flex items-end justify-between mb-3">
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#0b457f]">Order Progress</p>
               <p className="text-xs text-[#505050]">
                 Stage {data.currentStage + 1} of {data.stages.length}
+                <span className="ml-2 font-semibold tabular-nums text-[#0b457f]">{Math.round(shownProgress)}%</span>
               </p>
             </div>
-            <div className="h-1 w-full bg-[#e7eef5] rounded-full mb-8 overflow-hidden">
+            <div className="relative mb-8 h-1.5 w-full rounded-full bg-[#e7eef5]">
               <div
-                className="h-full bg-[#0b457f] rounded-full transition-[width] duration-1000 ease-out"
-                style={{ width: barReady ? `${progress}%` : '0%' }}
+                className="track-bar absolute inset-y-0 left-0 overflow-hidden rounded-full"
+                style={{ width: `${shownProgress}%` }}
               />
+              {shownProgress > 2 && (
+                <span
+                  className="absolute top-1/2 z-10 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[#0b457f] bg-white shadow-[0_0_0_4px_rgba(11,69,127,0.12)]"
+                  style={{ left: `${Math.min(shownProgress, 100)}%` }}
+                />
+              )}
             </div>
 
             <ol>
@@ -259,7 +287,7 @@ export default function VehicleTrackingPage() {
                     </span>
                     <div className="min-w-0 pt-2">
                       <p
-                        className={`font-semibold text-sm sm:text-[15px] leading-snug ${
+                        className={`font-changan font-normal text-sm sm:text-base leading-snug ${
                           isCurrent ? 'text-[#0b457f]' : isDone ? 'text-[#282828]' : 'text-[#a0a0a0]'
                         }`}
                       >
