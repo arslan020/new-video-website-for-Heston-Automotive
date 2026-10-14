@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import AuditLog from '@/models/AuditLog';
+import VehicleTracking from '@/models/VehicleTracking';
 import { getUserFromRequest, unauthorizedResponse } from '@/lib/auth';
 import { sendEmail } from '@/lib/email';
 import { sendSMS } from '@/lib/sms';
@@ -28,6 +29,9 @@ export async function POST(req: NextRequest) {
     const results: { email: string | null; sms: string | null; smsError?: string | null } = { email: null, sms: null, smsError: null };
     const formattedName = capitalizeWords(customerName || '');
     const greetingName = formattedName ? `${customerTitle ? customerTitle + ' ' : ''}${formattedName}` : 'Customer';
+    if (stockId && formattedName && greetingName !== 'Customer') {
+      await VehicleTracking.updateOne({ stockId }, { $set: { customerName: greetingName } });
+    }
     const vehicleName = `${vehicleDetails?.make ?? ''} ${vehicleDetails?.model ?? ''}`.trim();
 
     if (email) {

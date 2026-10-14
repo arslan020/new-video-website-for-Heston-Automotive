@@ -48,6 +48,7 @@ interface TrackingData {
   currentStage: number;
   updatedAt: string;
   stages: string[];
+  customerName?: string;
   remarks?: StageRemark[];
 }
 
@@ -151,6 +152,7 @@ export default function VehicleTrackingPage() {
   }
 
   const vehicleName = [data.make, data.model].filter(Boolean).join(' ') || 'vehicle';
+  const customerName = data.customerName?.trim();
   const exterior = findExteriorColour(data.model, data.derivative, data.colour);
   const readyIndex = data.stages.length - 2;
   const handoverIndex = data.stages.length - 1;
@@ -175,10 +177,11 @@ export default function VehicleTrackingPage() {
           ) : null}
 
           <div className="text-center mb-6 sm:mb-8">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 mb-1 sm:mb-2">
-              Your {vehicleName}
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#282828] mb-1 sm:mb-2">
+              {customerName ? `Hello, ${customerName}` : `Your ${vehicleName}`}
             </h1>
-            <p className="text-sm sm:text-base text-gray-500">
+            <p className="text-sm sm:text-base text-[#505050]">
+              {customerName ? `Your ${vehicleName}. ` : ''}
               Follow your car from order through to handover at Changan Heathrow.
             </p>
           </div>
