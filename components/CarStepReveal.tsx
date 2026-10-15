@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export default function CarStepReveal({
   src,
@@ -12,6 +12,8 @@ export default function CarStepReveal({
   progress: number;
 }) {
   const [bounds, setBounds] = useState({ left: 0.12, right: 0.84 });
+  const frostRef = useRef<HTMLDivElement>(null);
+  const spanRef = useRef(1);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,6 +50,31 @@ export default function CarStepReveal({
   const edge = (bounds.left + (bounds.right - bounds.left) * (Math.min(progress, 100) / 100)) * 100;
   const span = Math.max(bounds.right * 100 - edge, 1);
   const done = progress >= 99.6;
+  spanRef.current = span;
+
+  useEffect(() => {
+    const el = frostRef.current;
+    if (!el || done) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const mobile = window.matchMedia('(max-width: 768px)');
+    let frame = 0;
+    let lastPeriod = 0;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const grey = el.clientWidth * (spanRef.current / 100);
+      const period = Math.max(Math.round(grey / 2), 1);
+      const duration = mobile.matches ? 3600 : 2100;
+      const t = ((now - start) % duration) / duration;
+      if (period !== lastPeriod) {
+        lastPeriod = period;
+        el.style.backgroundSize = `${period}px 100%`;
+      }
+      el.style.backgroundPosition = `${(t * period).toFixed(2)}px 0px`;
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [done, src]);
   const mask = `linear-gradient(to right, transparent ${edge.toFixed(2)}%, #000 calc(${edge.toFixed(2)}% + 1.6%)), url("${src}")`;
 
   return (
@@ -56,6 +83,7 @@ export default function CarStepReveal({
       {!done && (
         <div
           aria-hidden
+          ref={frostRef}
           className="car-reveal-frost pointer-events-none absolute inset-0"
           style={{
             WebkitMaskImage: mask,
@@ -67,20 +95,7 @@ export default function CarStepReveal({
             WebkitMaskComposite: 'source-in',
             maskComposite: 'intersect',
           }}
-        >
-          <div className="car-sheen-track" style={{ left: `${edge}%`, width: `${span}%` }}>
-            <div className="car-sheen-move">
-              <div className="car-sheen-set">
-                <span />
-                <span />
-              </div>
-              <div className="car-sheen-set">
-                <span />
-                <span />
-              </div>
-            </div>
-          </div>
-        </div>
+        />
       )}
     </div>
   );

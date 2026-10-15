@@ -529,39 +529,11 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .track-bar::after,
-  .car-sheen-move { animation: none; }
+  .track-bar::after { animation: none; }
 }
 
 .car-reveal-frost {
-  background: rgba(214, 218, 224, 0.9);
-  overflow: hidden;
-}
-
-.car-sheen-track {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  overflow: hidden;
-}
-
-.car-sheen-move {
-  display: flex;
-  height: 100%;
-  width: 200%;
-  animation: car-sheen-pass 4.2s linear infinite;
-  -webkit-animation: car-sheen-pass 4.2s linear infinite;
-}
-
-.car-sheen-set {
-  display: flex;
-  flex: 0 0 50%;
-  height: 100%;
-}
-
-.car-sheen-set span {
-  flex: 0 0 50%;
-  height: 100%;
+  background-color: rgba(214, 218, 224, 0.9);
   background-image: linear-gradient(
     100deg,
     rgba(255, 255, 255, 0) 0%,
@@ -570,13 +542,6 @@ body {
     rgba(255, 255, 255, 0.2) 76%,
     rgba(255, 255, 255, 0) 100%
   );
-}
-
-@media (max-width: 768px) {
-  .car-sheen-move { animation-duration: 7.2s; }
-}
-
-@keyframes car-sheen-pass {
-  from { transform: translate3d(-50%, 0, 0); }
-  to { transform: translate3d(0, 0, 0); }
+  background-repeat: repeat-x;
+  overflow: hidden;
 }
