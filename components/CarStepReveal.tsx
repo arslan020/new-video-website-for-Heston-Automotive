@@ -70,10 +70,14 @@ export default function CarStepReveal({
         >
           <div className="car-sheen-track" style={{ left: `${edge}%`, width: `${span}%` }}>
             <div className="car-sheen-move">
-              <span />
-              <span />
-              <span />
-              <span />
+              <div className="car-sheen-set">
+                <span />
+                <span />
+              </div>
+              <div className="car-sheen-set">
+                <span />
+                <span />
+              </div>
             </div>
           </div>
         </div>
