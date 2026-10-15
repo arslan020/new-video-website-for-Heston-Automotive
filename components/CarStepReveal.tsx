@@ -13,7 +13,6 @@ export default function CarStepReveal({
 }) {
   const [bounds, setBounds] = useState({ left: 0.12, right: 0.84 });
   const frostRef = useRef<HTMLDivElement>(null);
-  const spanRef = useRef(1);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,9 +47,7 @@ export default function CarStepReveal({
   }, [src]);
 
   const edge = (bounds.left + (bounds.right - bounds.left) * (Math.min(progress, 100) / 100)) * 100;
-  const span = Math.max(bounds.right * 100 - edge, 1);
   const done = progress >= 99.6;
-  spanRef.current = span;
 
   useEffect(() => {
     const el = frostRef.current;
@@ -61,8 +58,7 @@ export default function CarStepReveal({
     let lastPeriod = 0;
     const start = performance.now();
     const tick = (now: number) => {
-      const grey = el.clientWidth * (spanRef.current / 100);
-      const period = Math.max(Math.round(grey / 2), 1);
+      const period = Math.max(Math.round(el.clientWidth * 0.2), 24);
       const duration = mobile.matches ? 3600 : 2100;
       const t = ((now - start) % duration) / duration;
       if (period !== lastPeriod) {
