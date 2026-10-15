@@ -68,26 +68,7 @@ export default function CarStepReveal({
             maskComposite: 'intersect',
           }}
         >
-          <div
-            className="car-sheen-track"
-            style={{
-              left: `${edge}%`,
-              width: `${span}%`,
-              ['--span-num' as string]: String(span / 100),
-              ['--sheen-half' as string]: `${1250 / span}%`,
-            }}
-          >
-            <div className="car-sheen-strip">
-              <span />
-              <span />
-              <span />
-              <span />
-              <span />
-              <span />
-              <span />
-              <span />
-            </div>
-          </div>
+          <div className="car-sheen-track" style={{ left: `${edge}%`, width: `${span}%` }} />
         </div>
       )}
     </div>
