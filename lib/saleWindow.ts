@@ -77,7 +77,7 @@ export function toView(record: ISaleWindow, today = utcToday()): SaleWindowView 
     id: String(record._id),
     invoiceNumber: record.invoiceNumber,
     vin: record.vin,
-    vehicleType: record.vehicleType,
+    vehicleType: record.vehicleType === 'Demo' ? 'Demo' : 'Stock',
     invoiceDate: invoiceDate.toISOString(),
     financingDate: financingDate.toISOString(),
     dayNumber,

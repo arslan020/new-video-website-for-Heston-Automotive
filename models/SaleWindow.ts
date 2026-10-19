@@ -27,7 +27,10 @@ const saleWindowSchema = new mongoose.Schema<ISaleWindow>(
   { timestamps: true }
 );
 
-const SaleWindow: Model<ISaleWindow> =
-  mongoose.models.SaleWindow || mongoose.model<ISaleWindow>('SaleWindow', saleWindowSchema);
+if (mongoose.models.SaleWindow) {
+  mongoose.deleteModel('SaleWindow');
+}
+
+const SaleWindow: Model<ISaleWindow> = mongoose.model<ISaleWindow>('SaleWindow', saleWindowSchema);
 
 export default SaleWindow;
