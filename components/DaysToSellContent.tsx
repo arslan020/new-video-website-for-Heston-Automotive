@@ -181,10 +181,10 @@ export default function DaysToSellContent() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to send');
-      showToast('Test email sent to Arslan and Alex', 'success');
+      showToast('Email sent to Alex, Eesa, Rashid, Azeem and Arslan', 'success');
     } catch (error) {
       console.error(error);
-      showToast('Could not send the test email', 'error');
+      showToast('Could not send the email', 'error');
     } finally {
       setSendingTest(false);
     }
@@ -290,7 +290,7 @@ export default function DaysToSellContent() {
             disabled={sendingTest}
             className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
-            {sendingTest ? 'Sending...' : 'Send test email to Arslan and Alex'}
+            {sendingTest ? 'Sending...' : 'Send email'}
           </button>
         </div>
       </div>
@@ -406,14 +406,16 @@ export default function DaysToSellContent() {
                 </tr>
               </thead>
               <tbody>
-                {vehicles.map((vehicle) => (
+                {vehicles.map((vehicle) => {
+                  const sold = Boolean(vehicle.soldAt) && vehicle.vehicleType !== 'Demo';
+                  return (
                   <Fragment key={vehicle.id}>
-                  <tr className={vehicle.soldAt ? 'bg-gray-50 text-gray-400' : 'border-t border-gray-100'}>
+                  <tr className={sold ? 'border-t border-sky-100 bg-sky-100 text-sky-950' : 'border-t border-gray-100'}>
                     <td className="px-4 py-3">
                       <p className="font-medium text-gray-900">{vehicle.vin}</p>
                       <p className="text-xs text-gray-500">
                         {vehicle.invoiceNumber}
-                        {vehicle.soldAt ? ' · Sold' : ''}
+                        {sold ? ' · Sold' : ''}
                       </p>
                     </td>
                     <td className="px-4 py-3">
@@ -429,13 +431,13 @@ export default function DaysToSellContent() {
                     <td className="px-4 py-3 font-medium">{vehicle.dayNumber}</td>
                     <td className="px-4 py-3">{vehicle.status}</td>
                     <td className="px-4 py-3">
-                      <p className={`font-semibold ${vehicle.soldAt ? 'text-gray-400' : dayClass(vehicle.daysTo90)}`}>
+                      <p className={`font-semibold ${sold ? 'text-sky-950' : dayClass(vehicle.daysTo90)}`}>
                         {dayText(vehicle.daysTo90)}
                       </p>
                       <p className="text-xs text-gray-500">{formatDate(vehicle.day90)}</p>
                     </td>
                     <td className="px-4 py-3">
-                      <p className={`font-semibold ${vehicle.soldAt ? 'text-gray-400' : dayClass(vehicle.daysTo360)}`}>
+                      <p className={`font-semibold ${sold ? 'text-sky-950' : dayClass(vehicle.daysTo360)}`}>
                         {dayText(vehicle.daysTo360)}
                       </p>
                       <p className="text-xs text-gray-500">{formatDate(vehicle.day360)}</p>
@@ -444,7 +446,8 @@ export default function DaysToSellContent() {
                     <td className="px-4 py-3">{formatMoney(vehicle.interestToDate)}</td>
                     <td className="px-4 py-3">{formatMoney(vehicle.closingBalance)}</td>
                     <td className="px-4 py-3 text-right">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex items-center justify-end gap-3">
+                        {sold ? <span className="text-sm font-semibold text-sky-700">Sold</span> : null}
                         <button
                           type="button"
                           disabled={savingId === vehicle.id}
@@ -453,14 +456,16 @@ export default function DaysToSellContent() {
                         >
                           {editingId === vehicle.id ? 'Close' : 'Edit'}
                         </button>
+                        {vehicle.vehicleType === 'Demo' ? null : (
                         <button
                           type="button"
                           disabled={savingId === vehicle.id}
                           onClick={() => markSold(vehicle, !vehicle.soldAt)}
                           className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                         >
-                          {vehicle.soldAt ? 'Undo sold' : 'Mark sold'}
+                          {sold ? 'Undo sold' : 'Mark sold'}
                         </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -549,7 +554,8 @@ export default function DaysToSellContent() {
                     </tr>
                   ) : null}
                   </Fragment>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

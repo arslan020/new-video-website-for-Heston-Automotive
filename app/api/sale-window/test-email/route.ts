@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import { getUserFromRequest, unauthorizedResponse, forbiddenResponse } from '@/lib/auth';
-import { SALE_WINDOW_TEST_EMAILS, sendSaleWindowReminder } from '@/lib/saleWindow';
+import { SALE_WINDOW_EMAILS, sendSaleWindowReminder } from '@/lib/saleWindow';
 
 export async function POST(req: NextRequest) {
   const user = await getUserFromRequest(req);
@@ -11,9 +11,9 @@ export async function POST(req: NextRequest) {
   try {
     await connectDB();
     const result = await sendSaleWindowReminder();
-    return Response.json({ ...result, to: SALE_WINDOW_TEST_EMAILS });
+    return Response.json({ ...result, to: SALE_WINDOW_EMAILS });
   } catch (err) {
     console.error(err);
-    return Response.json({ message: 'Could not send the test email' }, { status: 500 });
+    return Response.json({ message: 'Could not send the email' }, { status: 500 });
   }
 }

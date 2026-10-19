@@ -1,7 +1,13 @@
 import SaleWindow, { ISaleWindow } from '@/models/SaleWindow';
 import { sendEmail } from '@/lib/email';
 
-export const SALE_WINDOW_TEST_EMAILS = ['arslan@hestonautomotive.com', 'alex@hestonautomotive.com'];
+export const SALE_WINDOW_EMAILS = [
+  'alex@hestonautomotive.com',
+  'eesa@hestonautomotive.com',
+  'rashid@hestonautomotive.com',
+  'azeem@hestonautomotive.com',
+  'arslan@hestonautomotive.com',
+];
 
 const DAY = 24 * 60 * 60 * 1000;
 const ANNUAL_RATE = 0.079;
@@ -96,6 +102,7 @@ export function toView(record: ISaleWindow, today = utcToday()): SaleWindowView 
 
 export async function ensureSaleWindows() {
   await SaleWindow.collection.updateMany({ vehicleType: 'New' }, { $set: { vehicleType: 'Stock' } });
+  await SaleWindow.collection.updateMany({ vehicleType: 'Demo', soldAt: { $ne: null } }, { $set: { soldAt: null } });
   for (const row of SALE_WINDOW_SEED) {
     const exists = await SaleWindow.findOne({
       $or: [{ vin: row.vin }, { invoiceNumber: row.invoiceNumber }],
@@ -120,6 +127,30 @@ function dayLabel(days: number) {
   return `${days} days left`;
 }
 
+function vehiclesLabel(count: number) {
+  return `${count} ${count === 1 ? 'vehicle' : 'vehicles'}`;
+}
+
+function listLine(parts: string[]) {
+  if (parts.length === 0) return '';
+  if (parts.length === 1) return parts[0];
+  return `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
+}
+
+function emailSummary(remaining: number, demo: number, sold: number, past90: number, dueSoon: number) {
+  const opening = `${listLine([
+    `${remaining} remaining to sell`,
+    `${demo} demo`,
+    `${sold} sold`,
+  ])}.`;
+  if (past90 > 0 && dueSoon > 0) {
+    return `${opening} ${vehiclesLabel(past90)} ${past90 === 1 ? 'is' : 'are'} past the 90-day mark, and ${vehiclesLabel(dueSoon)} ${dueSoon === 1 ? 'is' : 'are'} due in the next 14 days.`;
+  }
+  if (past90 > 0) return `${opening} ${vehiclesLabel(past90)} ${past90 === 1 ? 'is' : 'are'} past the 90-day mark.`;
+  if (dueSoon > 0) return `${opening} ${vehiclesLabel(dueSoon)} ${dueSoon === 1 ? 'is' : 'are'} due in the next 14 days.`;
+  return opening;
+}
+
 function escapeHtml(value: string) {
   return value
     .replace(/&/g, '&amp;')
@@ -137,19 +168,22 @@ export async function sendSaleWindowReminder() {
     if (soldRank !== 0) return soldRank;
     return a.daysTo90 - b.daysTo90;
   });
-  const recipients = SALE_WINDOW_TEST_EMAILS;
-  const unsold = rows.filter((row) => !row.soldAt);
-  const sold = rows.filter((row) => row.soldAt);
-  const past90 = unsold.filter((row) => row.daysTo90 < 0).length;
-  const dueSoon = unsold.filter((row) => row.daysTo90 >= 0 && row.daysTo90 <= 14).length;
+  const recipients = SALE_WINDOW_EMAILS;
+  const isSold = (row: SaleWindowView) => Boolean(row.soldAt) && row.vehicleType !== 'Demo';
+  const demo = rows.filter((row) => row.vehicleType === 'Demo');
+  const remaining = rows.filter((row) => row.vehicleType !== 'Demo' && !row.soldAt);
+  const sold = rows.filter((row) => isSold(row));
+  const past90 = remaining.filter((row) => row.daysTo90 < 0).length;
+  const dueSoon = remaining.filter((row) => row.daysTo90 >= 0 && row.daysTo90 <= 14).length;
   const cell = 'padding:8px 10px;border-bottom:1px solid #e5e7eb;vertical-align:top;';
   const body = rows
     .map((row) => {
       const stock = row.vehicleType !== 'Demo';
-      const muted = row.soldAt ? 'color:#6b7280;background:#f9fafb;' : '';
+      const soldRow = isSold(row);
+      const muted = soldRow ? 'color:#0c4a6e;background:#e0f2fe;' : '';
       return `<tr style="${muted}">
         <td style="${cell}">${escapeHtml(row.vin)}<br><span style="color:#6b7280;font-size:12px;">${escapeHtml(row.invoiceNumber)}</span></td>
-        <td style="${cell}"><span style="display:inline-block;padding:3px 8px;border-radius:6px;background:${stock ? '#16a34a' : '#dc2626'};color:#ffffff;font-weight:700;">${stock ? 'Stock' : 'Demo'}</span>${row.soldAt ? '<br><span style="display:inline-block;margin-top:6px;padding:3px 8px;border-radius:6px;background:#374151;color:#ffffff;font-weight:700;">Sold</span>' : ''}</td>
+        <td style="${cell}"><span style="display:inline-block;padding:3px 8px;border-radius:6px;background:${stock ? '#16a34a' : '#dc2626'};color:#ffffff;font-weight:700;">${stock ? 'Stock' : 'Demo'}</span>${soldRow ? '<br><span style="display:inline-block;margin-top:6px;padding:3px 8px;border-radius:6px;background:#374151;color:#ffffff;font-weight:700;">Sold</span>' : ''}</td>
         <td style="${cell}">${row.dayNumber}</td>
         <td style="${cell}">${escapeHtml(row.status)}</td>
         <td style="${cell}">${dayLabel(row.daysTo90)}<br><span style="color:#6b7280;font-size:12px;">${formatUkDate(new Date(row.day90))}</span></td>
@@ -164,11 +198,11 @@ export async function sendSaleWindowReminder() {
   const appUrl = process.env.FRONTEND_URL || 'https://video.hestonautomotive.com';
   await sendEmail({
     to: recipients,
-    subject: `Days to sell test: ${unsold.length} unsold, ${sold.length} sold`,
+    subject: `Days to sell: ${remaining.length} remaining to sell, ${demo.length} demo, ${sold.length} sold`,
     html: `
       <div style="font-family:Arial,sans-serif;color:#1f2937;">
         <h2 style="margin:0 0 8px;">Days to sell</h2>
-        <p style="margin:0 0 16px;">Test email. ${unsold.length} vehicles are still unsold and ${sold.length} are marked sold. ${past90} unsold are past the 90-day mark and ${dueSoon} reach it within 14 days. Stock is green, Demo is red.</p>
+        <p style="margin:0 0 16px;">${emailSummary(remaining.length, demo.length, sold.length, past90, dueSoon)}</p>
         <table style="border-collapse:collapse;width:100%;font-size:14px;">
           <thead>
             <tr style="background:#f3f4f6;text-align:left;">
@@ -190,5 +224,5 @@ export async function sendSaleWindowReminder() {
     `,
   });
 
-  return { sent: true, recipients, count: rows.length, unsold: unsold.length, sold: sold.length };
+  return { sent: true, recipients, count: rows.length, remaining: remaining.length, demo: demo.length, sold: sold.length };
 }

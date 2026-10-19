@@ -48,6 +48,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     if (hasType) update.vehicleType = body.vehicleType === 'Demo' ? 'Demo' : 'Stock';
     if (hasSold) update.soldAt = body.sold ? new Date() : null;
+    if (update.vehicleType === 'Demo') update.soldAt = null;
     if (hasInvoice) {
       const invoiceNumber = String(body.invoiceNumber || '').trim();
       if (!invoiceNumber) return Response.json({ message: 'Invoice number is required' }, { status: 400 });
@@ -78,6 +79,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     await connectDB();
+    if (body.sold === true && update.vehicleType !== 'Stock') {
+      const current = await SaleWindow.findById(id).select('vehicleType');
+      if (!current) return Response.json({ message: 'Vehicle not found' }, { status: 404 });
+      if (current.vehicleType === 'Demo') {
+        return Response.json({ message: 'Demo vehicles cannot be marked sold' }, { status: 400 });
+      }
+    }
     if (update.vin || update.invoiceNumber) {
       const clash = await SaleWindow.findOne({
         _id: { $ne: id },
