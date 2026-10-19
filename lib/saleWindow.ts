@@ -2,6 +2,7 @@ import SaleWindow, { ISaleWindow } from '@/models/SaleWindow';
 import { sendEmail } from '@/lib/email';
 
 export const SALE_WINDOW_EMAILS = ['arslan@hestonautomotive.com', 'alex@hestonautomotive.com'];
+export const SALE_WINDOW_MONDAY_EMAIL = ['arslan@hestonautomotive.com'];
 
 const DAY = 24 * 60 * 60 * 1000;
 const ANNUAL_RATE = 0.079;
@@ -161,12 +162,23 @@ function escapeHtml(value: string) {
     .replace(/"/g, '&quot;');
 }
 
-export async function sendSaleWindowReminder() {
+export function isLondonMonday1550(now = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/London',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(now);
+  const value = (type: string) => parts.find((part) => part.type === type)?.value;
+  return value('weekday') === 'Mon' && value('hour') === '15' && Number(value('minute')) >= 45;
+}
+
+export async function sendSaleWindowReminder(recipients = SALE_WINDOW_EMAILS) {
   const today = utcToday();
   await ensureSaleWindows();
   const records = await SaleWindow.find().sort({ invoiceDate: 1 });
   const rows = records.map((record) => toView(record, today)).sort(compareSaleWindows);
-  const recipients = SALE_WINDOW_EMAILS;
   const isSold = (row: SaleWindowView) => Boolean(row.soldAt) && row.vehicleType !== 'Demo';
   const demo = rows.filter((row) => row.vehicleType === 'Demo');
   const remaining = rows.filter((row) => row.vehicleType !== 'Demo' && !row.soldAt);

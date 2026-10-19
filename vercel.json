@@ -3,6 +3,14 @@
     {
       "path": "/api/cron/sync-stock",
       "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/cron/sale-window-reminder",
+      "schedule": "50 14 * * 1"
+    },
+    {
+      "path": "/api/cron/sale-window-reminder",
+      "schedule": "50 15 * * 1"
     }
   ]
 }
