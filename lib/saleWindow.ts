@@ -1,7 +1,7 @@
 import SaleWindow, { ISaleWindow } from '@/models/SaleWindow';
 import { sendEmail } from '@/lib/email';
 
-export const SALE_WINDOW_EMAILS = ['arslan@hestonautomotive.com'];
+export const SALE_WINDOW_EMAILS = ['arslan@hestonautomotive.com', 'alex@hestonautomotive.com'];
 
 const DAY = 24 * 60 * 60 * 1000;
 const ANNUAL_RATE = 0.079;

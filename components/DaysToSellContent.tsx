@@ -181,7 +181,7 @@ export default function DaysToSellContent() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to send');
-      showToast('Email sent to Arslan', 'success');
+      showToast('Email sent to Arslan and Alex', 'success');
     } catch (error) {
       console.error(error);
       showToast('Could not send the email', 'error');
