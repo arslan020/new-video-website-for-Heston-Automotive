@@ -1,7 +1,7 @@
 import SaleWindow, { ISaleWindow } from '@/models/SaleWindow';
 import { sendEmail } from '@/lib/email';
 
-export const SALE_WINDOW_EMAILS = ['arslan@hestonautomotive.com', 'alex@hestonautomotive.com'];
+export const SALE_WINDOW_EMAILS = ['arslan@hestonautomotive.com'];
 export const SALE_WINDOW_MONDAY_EMAIL = ['arslan@hestonautomotive.com'];
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -162,7 +162,7 @@ function escapeHtml(value: string) {
     .replace(/"/g, '&quot;');
 }
 
-export function isLondonMonday1550(now = new Date()) {
+export function isLondonMonday1558(now = new Date()) {
   const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Europe/London',
     weekday: 'short',
@@ -171,7 +171,8 @@ export function isLondonMonday1550(now = new Date()) {
     hourCycle: 'h23',
   }).formatToParts(now);
   const value = (type: string) => parts.find((part) => part.type === type)?.value;
-  return value('weekday') === 'Mon' && value('hour') === '15' && Number(value('minute')) >= 45;
+  const minute = Number(value('minute'));
+  return value('weekday') === 'Mon' && value('hour') === '15' && minute >= 55 && minute <= 59;
 }
 
 export async function sendSaleWindowReminder(recipients = SALE_WINDOW_EMAILS) {
@@ -208,10 +209,10 @@ export async function sendSaleWindowReminder(recipients = SALE_WINDOW_EMAILS) {
   const appUrl = process.env.FRONTEND_URL || 'https://video.hestonautomotive.com';
   await sendEmail({
     to: recipients,
-    subject: `Days to sell: ${remaining.length} remaining to sell, ${demo.length} demo, ${sold.length} sold`,
+    subject: `Changan cars: ${remaining.length} remaining to sell, ${demo.length} demo, ${sold.length} sold`,
     html: `
       <div style="font-family:Arial,sans-serif;color:#1f2937;">
-        <h2 style="margin:0 0 8px;">Days to sell</h2>
+        <h2 style="margin:0 0 8px;">Changan cars</h2>
         <p style="margin:0 0 16px;">${emailSummary(remaining.length, demo.length, sold.length, past90, dueSoon)}</p>
         <table style="border-collapse:collapse;width:100%;font-size:14px;">
           <thead>
