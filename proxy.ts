@@ -46,6 +46,11 @@ export async function proxy(req: NextRequest) {
     }
   }
 
+  // Scheduled jobs check their own secret inside the route.
+  if (pathname.startsWith('/api/cron/')) {
+    return NextResponse.next();
+  }
+
   // API route protection
   if (!pathname.startsWith('/api/') || isPublicApiPath(pathname)) {
     return NextResponse.next();
