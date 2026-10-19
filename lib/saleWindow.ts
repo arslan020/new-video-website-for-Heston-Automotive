@@ -1,13 +1,7 @@
 import SaleWindow, { ISaleWindow } from '@/models/SaleWindow';
 import { sendEmail } from '@/lib/email';
 
-export const SALE_WINDOW_EMAILS = [
-  'alex@hestonautomotive.com',
-  'eesa@hestonautomotive.com',
-  'rashid@hestonautomotive.com',
-  'azeem@hestonautomotive.com',
-  'arslan@hestonautomotive.com',
-];
+export const SALE_WINDOW_EMAILS = ['arslan@hestonautomotive.com'];
 
 const DAY = 24 * 60 * 60 * 1000;
 const ANNUAL_RATE = 0.079;
@@ -121,6 +115,14 @@ export async function ensureSaleWindows() {
   }
 }
 
+export function compareSaleWindows<T extends { vehicleType: string; soldAt: string | null; daysTo90: number }>(a: T, b: T) {
+  const soldRank = Number(Boolean(a.soldAt)) - Number(Boolean(b.soldAt));
+  if (soldRank !== 0) return soldRank;
+  const typeRank = Number(a.vehicleType === 'Demo') - Number(b.vehicleType === 'Demo');
+  if (typeRank !== 0) return typeRank;
+  return a.daysTo90 - b.daysTo90;
+}
+
 function dayLabel(days: number) {
   if (days < 0) return `${Math.abs(days)} days over`;
   if (days === 0) return 'Due today';
@@ -163,11 +165,7 @@ export async function sendSaleWindowReminder() {
   const today = utcToday();
   await ensureSaleWindows();
   const records = await SaleWindow.find().sort({ invoiceDate: 1 });
-  const rows = records.map((record) => toView(record, today)).sort((a, b) => {
-    const soldRank = Number(Boolean(a.soldAt)) - Number(Boolean(b.soldAt));
-    if (soldRank !== 0) return soldRank;
-    return a.daysTo90 - b.daysTo90;
-  });
+  const rows = records.map((record) => toView(record, today)).sort(compareSaleWindows);
   const recipients = SALE_WINDOW_EMAILS;
   const isSold = (row: SaleWindowView) => Boolean(row.soldAt) && row.vehicleType !== 'Demo';
   const demo = rows.filter((row) => row.vehicleType === 'Demo');

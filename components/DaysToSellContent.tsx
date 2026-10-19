@@ -154,7 +154,7 @@ export default function DaysToSellContent() {
       setVehicles((current) =>
         current
           .map((item) => (item.id === vehicle.id ? data : item))
-          .sort((a, b) => Number(Boolean(a.soldAt)) - Number(Boolean(b.soldAt)) || a.daysTo90 - b.daysTo90)
+          .sort((a, b) => Number(Boolean(a.soldAt)) - Number(Boolean(b.soldAt)) || Number(a.vehicleType === 'Demo') - Number(b.vehicleType === 'Demo') || a.daysTo90 - b.daysTo90)
       );
       setSummary((current) => {
         if (!current) return current;
@@ -181,7 +181,7 @@ export default function DaysToSellContent() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to send');
-      showToast('Email sent to Alex, Eesa, Rashid, Azeem and Arslan', 'success');
+      showToast('Email sent to Arslan', 'success');
     } catch (error) {
       console.error(error);
       showToast('Could not send the email', 'error');

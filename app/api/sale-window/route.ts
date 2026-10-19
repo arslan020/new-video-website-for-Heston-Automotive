@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import SaleWindow from '@/models/SaleWindow';
 import { getUserFromRequest, unauthorizedResponse, forbiddenResponse } from '@/lib/auth';
-import { ensureSaleWindows, toView, utcToday } from '@/lib/saleWindow';
+import { compareSaleWindows, ensureSaleWindows, toView, utcToday } from '@/lib/saleWindow';
 
 function utcDate(value: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     const records = await SaleWindow.find({}).sort({ invoiceDate: 1 });
     const vehicles = records
       .map((record) => toView(record, today))
-      .sort((a, b) => Number(Boolean(a.soldAt)) - Number(Boolean(b.soldAt)) || a.daysTo90 - b.daysTo90);
+      .sort(compareSaleWindows);
 
     const active = vehicles.filter((vehicle) => !vehicle.soldAt);
     const soonest90 = active.reduce((min, vehicle) => Math.min(min, vehicle.daysTo90), Number.POSITIVE_INFINITY);
