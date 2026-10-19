@@ -14,14 +14,15 @@ export async function register() {
 
     if (!process.env.VERCEL) {
       const { connectDB } = await import('./lib/mongodb');
-      const { SALE_WINDOW_MONDAY_EMAIL, sendSaleWindowReminder } = await import('./lib/saleWindow');
-      cron.schedule('58 15 * * 1', async () => {
+      const { isLondonMondaySendWindow, sendMondayEmailOnce } = await import('./lib/saleWindow');
+      cron.schedule('* * * * *', async () => {
+        if (!isLondonMondaySendWindow()) return;
         console.log('[Days to Sell] Sending Monday email to Arslan...');
         await connectDB();
-        const result = await sendSaleWindowReminder(SALE_WINDOW_MONDAY_EMAIL);
-        console.log('[Days to Sell] Monday email sent:', result);
+        const result = await sendMondayEmailOnce();
+        console.log('[Days to Sell] Monday email:', result);
       }, { timezone: 'Europe/London' });
-      console.log('[Days to Sell] Cron scheduled — Monday 15:58 UK time');
+      console.log('[Days to Sell] Cron scheduled — Monday 15:58 UK time, retries until 16:20');
     }
   }
 }

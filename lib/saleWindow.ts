@@ -162,17 +162,41 @@ function escapeHtml(value: string) {
     .replace(/"/g, '&quot;');
 }
 
-export function isLondonMonday1558(now = new Date()) {
+function londonPart(now: Date, type: Intl.DateTimeFormatPartTypes) {
   const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Europe/London',
     weekday: 'short',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
     hourCycle: 'h23',
   }).formatToParts(now);
-  const value = (type: string) => parts.find((part) => part.type === type)?.value;
-  const minute = Number(value('minute'));
-  return value('weekday') === 'Mon' && value('hour') === '15' && minute >= 55 && minute <= 59;
+  return parts.find((part) => part.type === type)?.value || '';
+}
+
+export function isLondonMondaySendWindow(now = new Date()) {
+  const weekday = londonPart(now, 'weekday');
+  const minutes = Number(londonPart(now, 'hour')) * 60 + Number(londonPart(now, 'minute'));
+  return weekday === 'Mon' && minutes >= 15 * 60 + 58 && minutes <= 16 * 60 + 20;
+}
+
+export async function sendMondayEmailOnce() {
+  if (!isLondonMondaySendWindow()) return { skipped: true, reason: 'outside-window' };
+  const date = `${londonPart(new Date(), 'year')}-${londonPart(new Date(), 'month')}-${londonPart(new Date(), 'day')}`;
+  const claimed = await SaleWindow.db.collection('sale_window_monday_emails').updateOne(
+    { date },
+    { $setOnInsert: { date, sentAt: new Date() } },
+    { upsert: true }
+  );
+  if (!claimed.upsertedId) return { skipped: true, reason: 'already-sent', date };
+  try {
+    return await sendSaleWindowReminder(SALE_WINDOW_MONDAY_EMAIL);
+  } catch (err) {
+    await SaleWindow.db.collection('sale_window_monday_emails').deleteOne({ date });
+    throw err;
+  }
 }
 
 export async function sendSaleWindowReminder(recipients = SALE_WINDOW_EMAILS) {
