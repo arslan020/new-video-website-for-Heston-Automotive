@@ -17,12 +17,12 @@ export async function register() {
       const { isLondonMondaySendWindow, sendMondayEmailOnce } = await import('./lib/saleWindow');
       cron.schedule('* * * * *', async () => {
         if (!isLondonMondaySendWindow()) return;
-        console.log('[Days to Sell] Sending Monday email to Arslan...');
+        console.log('[Days to Sell] Sending Monday 9am email...');
         await connectDB();
         const result = await sendMondayEmailOnce();
         console.log('[Days to Sell] Monday email:', result);
       }, { timezone: 'Europe/London' });
-      console.log('[Days to Sell] Cron scheduled — Monday 15:58 UK time, retries until 16:20');
+      console.log('[Days to Sell] Cron scheduled — Monday 9:00 UK time, retries until 9:20');
     }
   }
 }

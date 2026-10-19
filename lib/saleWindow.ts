@@ -1,8 +1,13 @@
 import SaleWindow, { ISaleWindow } from '@/models/SaleWindow';
 import { sendEmail } from '@/lib/email';
 
-export const SALE_WINDOW_EMAILS = ['arslan@hestonautomotive.com'];
-export const SALE_WINDOW_MONDAY_EMAIL = ['arslan@hestonautomotive.com'];
+export const SALE_WINDOW_EMAILS = [
+  'eesa@hestonautomotive.com',
+  'alex@hestonautomotive.com',
+  'azeem@hestonautomotive.com',
+  'arslan@hestonautomotive.com',
+];
+export const SALE_WINDOW_MONDAY_EMAIL = SALE_WINDOW_EMAILS;
 
 const DAY = 24 * 60 * 60 * 1000;
 const ANNUAL_RATE = 0.079;
@@ -179,7 +184,7 @@ function londonPart(now: Date, type: Intl.DateTimeFormatPartTypes) {
 export function isLondonMondaySendWindow(now = new Date()) {
   const weekday = londonPart(now, 'weekday');
   const minutes = Number(londonPart(now, 'hour')) * 60 + Number(londonPart(now, 'minute'));
-  return weekday === 'Mon' && minutes >= 15 * 60 + 58 && minutes <= 16 * 60 + 20;
+  return weekday === 'Mon' && minutes >= 9 * 60 && minutes <= 9 * 60 + 20;
 }
 
 export async function sendMondayEmailOnce() {

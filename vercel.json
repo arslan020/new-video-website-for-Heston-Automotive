@@ -6,11 +6,11 @@
     },
     {
       "path": "/api/cron/sale-window-reminder",
-      "schedule": "58 14 * * 1"
+      "schedule": "0 8 * * 1"
     },
     {
       "path": "/api/cron/sale-window-reminder",
-      "schedule": "58 15 * * 1"
+      "schedule": "0 9 * * 1"
     }
   ]
 }
