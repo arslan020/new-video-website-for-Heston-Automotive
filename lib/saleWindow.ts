@@ -8,11 +8,11 @@ const ANNUAL_RATE = 0.079;
 const DAY_COUNT = 365;
 
 export const SALE_WINDOW_SEED = [
-  { invoiceNumber: 'NFANLGB26002173', vin: 'LS6CMG1G8TC910061', invoiceDate: '2026-08-27', financingDate: '2026-08-28', vehicleType: 'New' as const, initialAmount: 37713.89, outstandingAmount: 37713.89 },
-  { invoiceNumber: 'NFANLGB26002172', vin: 'LS6C3E0M3TF607461', invoiceDate: '2026-08-27', financingDate: '2026-08-28', vehicleType: 'New' as const, initialAmount: 36793.87, outstandingAmount: 36793.87 },
-  { invoiceNumber: 'NFANLGB26002170', vin: 'LS6C3E0MXTF606842', invoiceDate: '2026-08-27', financingDate: '2026-08-28', vehicleType: 'New' as const, initialAmount: 36793.87, outstandingAmount: 36793.87 },
-  { invoiceNumber: 'NFANLGB26002174', vin: 'LS6CME0P0TC910674', invoiceDate: '2026-08-27', financingDate: '2026-08-28', vehicleType: 'New' as const, initialAmount: 35873.88, outstandingAmount: 35873.88 },
-  { invoiceNumber: 'NFANLGB26002171', vin: 'LS6C3E0M0TF604551', invoiceDate: '2026-08-27', financingDate: '2026-08-28', vehicleType: 'New' as const, initialAmount: 36793.87, outstandingAmount: 36793.87 },
+  { invoiceNumber: 'NFANLGB26002173', vin: 'LS6CMG1G8TC910061', invoiceDate: '2026-08-27', financingDate: '2026-08-28', vehicleType: 'Stock' as const, initialAmount: 37713.89, outstandingAmount: 37713.89 },
+  { invoiceNumber: 'NFANLGB26002172', vin: 'LS6C3E0M3TF607461', invoiceDate: '2026-08-27', financingDate: '2026-08-28', vehicleType: 'Stock' as const, initialAmount: 36793.87, outstandingAmount: 36793.87 },
+  { invoiceNumber: 'NFANLGB26002170', vin: 'LS6C3E0MXTF606842', invoiceDate: '2026-08-27', financingDate: '2026-08-28', vehicleType: 'Stock' as const, initialAmount: 36793.87, outstandingAmount: 36793.87 },
+  { invoiceNumber: 'NFANLGB26002174', vin: 'LS6CME0P0TC910674', invoiceDate: '2026-08-27', financingDate: '2026-08-28', vehicleType: 'Stock' as const, initialAmount: 35873.88, outstandingAmount: 35873.88 },
+  { invoiceNumber: 'NFANLGB26002171', vin: 'LS6C3E0M0TF604551', invoiceDate: '2026-08-27', financingDate: '2026-08-28', vehicleType: 'Stock' as const, initialAmount: 36793.87, outstandingAmount: 36793.87 },
   { invoiceNumber: 'NFANLGB26002245', vin: 'LS6CME0P9TC910706', invoiceDate: '2026-09-02', financingDate: '2026-09-04', vehicleType: 'Demo' as const, initialAmount: 35873.88, outstandingAmount: 35873.88 },
   { invoiceNumber: 'NFANLGB26002243', vin: 'LS6C3E0M0TF605442', invoiceDate: '2026-09-02', financingDate: '2026-09-04', vehicleType: 'Demo' as const, initialAmount: 36793.87, outstandingAmount: 36793.87 },
   { invoiceNumber: 'NFANLGB26002246', vin: 'LS6CMG1G0TC910491', invoiceDate: '2026-09-02', financingDate: '2026-09-04', vehicleType: 'Demo' as const, initialAmount: 37713.89, outstandingAmount: 37713.89 },
@@ -48,7 +48,7 @@ export type SaleWindowView = {
   id: string;
   invoiceNumber: string;
   vin: string;
-  vehicleType: 'New' | 'Demo';
+  vehicleType: 'Stock' | 'Demo';
   invoiceDate: string;
   financingDate: string;
   dayNumber: number;
@@ -95,6 +95,7 @@ export function toView(record: ISaleWindow, today = utcToday()): SaleWindowView 
 }
 
 export async function ensureSaleWindows() {
+  await SaleWindow.collection.updateMany({ vehicleType: 'New' }, { $set: { vehicleType: 'Stock' } });
   for (const row of SALE_WINDOW_SEED) {
     await SaleWindow.updateOne(
       { vin: row.vin },

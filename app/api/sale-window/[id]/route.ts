@@ -12,15 +12,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   try {
     const { id } = await params;
     const body = await req.json();
-    if (typeof body.sold !== 'boolean') {
-      return Response.json({ message: 'sold must be true or false' }, { status: 400 });
+    const hasSold = typeof body.sold === 'boolean';
+    const hasType = body.vehicleType === 'Stock' || body.vehicleType === 'Demo' || body.vehicleType === 'New';
+    if (!hasSold && !hasType) {
+      return Response.json({ message: 'Nothing to update' }, { status: 400 });
     }
 
     await connectDB();
     const record = await SaleWindow.findById(id);
     if (!record) return Response.json({ message: 'Vehicle not found' }, { status: 404 });
 
-    record.soldAt = body.sold ? new Date() : null;
+    if (hasSold) record.soldAt = body.sold ? new Date() : null;
+    if (hasType) record.vehicleType = body.vehicleType === 'Demo' ? 'Demo' : 'Stock';
     await record.save();
     return Response.json(toView(record, utcToday()));
   } catch (err) {

@@ -8,7 +8,7 @@ type Vehicle = {
   id: string;
   invoiceNumber: string;
   vin: string;
-  vehicleType: 'New' | 'Demo';
+  vehicleType: 'Stock' | 'Demo';
   invoiceDate: string;
   dayNumber: number;
   status: string;
@@ -68,7 +68,7 @@ export default function DaysToSellContent() {
   const [form, setForm] = useState({
     invoiceNumber: '',
     vin: '',
-    vehicleType: 'New' as 'New' | 'Demo',
+    vehicleType: 'Stock' as 'Stock' | 'Demo',
     invoiceDate: '',
     financingDate: '',
     outstandingAmount: '',
@@ -95,6 +95,29 @@ export default function DaysToSellContent() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const updateType = async (vehicle: Vehicle, vehicleType: 'Stock' | 'Demo') => {
+    if (!user?.token || vehicle.vehicleType === vehicleType) return;
+    setSavingId(vehicle.id);
+    try {
+      const res = await fetch(`/api/sale-window/${vehicle.id}`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ vehicleType }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to update');
+      setVehicles((current) => current.map((item) => (item.id === vehicle.id ? data : item)));
+    } catch (error) {
+      console.error(error);
+      showToast('Could not update the status', 'error');
+    } finally {
+      setSavingId(null);
+    }
+  };
 
   const markSold = async (vehicle: Vehicle, sold: boolean) => {
     if (!user?.token) return;
@@ -169,7 +192,7 @@ export default function DaysToSellContent() {
       setForm({
         invoiceNumber: '',
         vin: '',
-        vehicleType: 'New',
+        vehicleType: 'Stock',
         invoiceDate: '',
         financingDate: '',
         outstandingAmount: '',
@@ -248,13 +271,13 @@ export default function DaysToSellContent() {
             />
           </label>
           <label className="text-sm text-gray-600">
-            Type
+            Status
             <select
               value={form.vehicleType}
-              onChange={(event) => setForm({ ...form, vehicleType: event.target.value as 'New' | 'Demo' })}
-              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-gray-900"
+              onChange={(event) => setForm({ ...form, vehicleType: event.target.value as 'Stock' | 'Demo' })}
+              className={`mt-1 w-full rounded-lg px-3 py-2 font-medium text-white ${form.vehicleType === 'Demo' ? 'bg-red-600' : 'bg-green-600'}`}
             >
-              <option value="New">New</option>
+              <option value="Stock">Stock</option>
               <option value="Demo">Demo</option>
             </select>
           </label>
@@ -320,8 +343,9 @@ export default function DaysToSellContent() {
               <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
                 <tr>
                   <th className="px-4 py-3 font-medium">Vehicle</th>
-                  <th className="px-4 py-3 font-medium">Day</th>
                   <th className="px-4 py-3 font-medium">Status</th>
+                  <th className="px-4 py-3 font-medium">Day</th>
+                  <th className="px-4 py-3 font-medium">Stage</th>
                   <th className="px-4 py-3 font-medium">90 days</th>
                   <th className="px-4 py-3 font-medium">360 days</th>
                   <th className="px-4 py-3 font-medium">Balance</th>
@@ -336,9 +360,19 @@ export default function DaysToSellContent() {
                     <td className="px-4 py-3">
                       <p className="font-medium text-gray-900">{vehicle.vin}</p>
                       <p className="text-xs text-gray-500">
-                        {vehicle.vehicleType} · {vehicle.invoiceNumber}
+                        {vehicle.invoiceNumber}
                         {vehicle.soldAt ? ' · Sold' : ''}
                       </p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <select
+                        value={vehicle.vehicleType === 'Demo' ? 'Demo' : 'Stock'}
+                        onChange={(event) => updateType(vehicle, event.target.value as 'Stock' | 'Demo')}
+                        className={`rounded-lg px-3 py-1.5 text-xs font-semibold text-white ${vehicle.vehicleType === 'Demo' ? 'bg-red-600' : 'bg-green-600'}`}
+                      >
+                        <option value="Stock">Stock</option>
+                        <option value="Demo">Demo</option>
+                      </select>
                     </td>
                     <td className="px-4 py-3 font-medium">{vehicle.dayNumber}</td>
                     <td className="px-4 py-3">{vehicle.status}</td>

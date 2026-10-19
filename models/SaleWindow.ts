@@ -5,7 +5,7 @@ export interface ISaleWindow extends Document {
   vin: string;
   invoiceDate: Date;
   financingDate: Date;
-  vehicleType: 'New' | 'Demo';
+  vehicleType: 'Stock' | 'Demo';
   initialAmount: number;
   outstandingAmount: number;
   soldAt?: Date | null;
@@ -19,7 +19,7 @@ const saleWindowSchema = new mongoose.Schema<ISaleWindow>(
     vin: { type: String, required: true, unique: true },
     invoiceDate: { type: Date, required: true },
     financingDate: { type: Date, required: true },
-    vehicleType: { type: String, enum: ['New', 'Demo'], required: true },
+    vehicleType: { type: String, enum: ['Stock', 'Demo'], required: true },
     initialAmount: { type: Number, required: true },
     outstandingAmount: { type: Number, required: true },
     soldAt: { type: Date, default: null },

@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const invoiceNumber = String(body.invoiceNumber || '').trim();
     const vin = String(body.vin || '').trim().toUpperCase();
-    const vehicleType = body.vehicleType === 'Demo' ? 'Demo' : body.vehicleType === 'New' ? 'New' : '';
+    const vehicleType = body.vehicleType === 'Demo' ? 'Demo' : body.vehicleType === 'Stock' || body.vehicleType === 'New' ? 'Stock' : '';
     const invoiceDate = utcDate(String(body.invoiceDate || ''));
     const financingDate = utcDate(String(body.financingDate || ''));
     const amount = Number(body.outstandingAmount);
