@@ -273,7 +273,7 @@ export default function DaysToSellContent() {
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">Days to Sell</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Counted from the financing date, the same way as the tracker. Interest stays at zero until day 90, then runs at 7.9% of the balance divided by 365.
+            Days are counted from the financing date. Interest stays at £0 for the first 90 days, then runs at 7.9% a year on the balance.
           </p>
         </div>
         <div className="flex gap-2">
