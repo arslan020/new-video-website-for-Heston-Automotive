@@ -104,12 +104,12 @@ export async function ensureSaleWindows() {
           invoiceNumber: row.invoiceNumber,
           invoiceDate: new Date(row.invoiceDate),
           financingDate: new Date(row.financingDate),
-          vehicleType: row.vehicleType,
           initialAmount: row.initialAmount,
           outstandingAmount: row.outstandingAmount,
         },
         $setOnInsert: {
           vin: row.vin,
+          vehicleType: row.vehicleType,
           soldAt: null,
         },
       },
@@ -124,45 +124,67 @@ function dayLabel(days: number) {
   return `${days} days left`;
 }
 
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 export async function sendSaleWindowReminder() {
   const today = utcToday();
   await ensureSaleWindows();
-  const records = await SaleWindow.find({ soldAt: null }).sort({ invoiceDate: 1 });
-  const rows = records.map((record) => toView(record, today)).sort((a, b) => a.daysTo90 - b.daysTo90);
+  const records = await SaleWindow.find().sort({ invoiceDate: 1 });
+  const rows = records.map((record) => toView(record, today)).sort((a, b) => {
+    const soldRank = Number(Boolean(a.soldAt)) - Number(Boolean(b.soldAt));
+    if (soldRank !== 0) return soldRank;
+    return a.daysTo90 - b.daysTo90;
+  });
   const recipients = SALE_WINDOW_TEST_EMAILS;
-
-  const past90 = rows.filter((row) => row.daysTo90 < 0).length;
-  const dueSoon = rows.filter((row) => row.daysTo90 >= 0 && row.daysTo90 <= 14).length;
+  const unsold = rows.filter((row) => !row.soldAt);
+  const sold = rows.filter((row) => row.soldAt);
+  const past90 = unsold.filter((row) => row.daysTo90 < 0).length;
+  const dueSoon = unsold.filter((row) => row.daysTo90 >= 0 && row.daysTo90 <= 14).length;
+  const cell = 'padding:8px 10px;border-bottom:1px solid #e5e7eb;vertical-align:top;';
   const body = rows
-    .map(
-      (row) => `<tr>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;">${row.vin}</td>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;">${row.vehicleType}</td>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;">${formatUkDate(new Date(row.invoiceDate))}</td>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;">${dayLabel(row.daysTo90)}</td>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;">${dayLabel(row.daysTo360)}</td>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;">${formatMoney(row.outstandingAmount)}</td>
-      </tr>`
-    )
+    .map((row) => {
+      const stock = row.vehicleType !== 'Demo';
+      const muted = row.soldAt ? 'color:#6b7280;background:#f9fafb;' : '';
+      return `<tr style="${muted}">
+        <td style="${cell}">${escapeHtml(row.vin)}<br><span style="color:#6b7280;font-size:12px;">${escapeHtml(row.invoiceNumber)}</span></td>
+        <td style="${cell}"><span style="display:inline-block;padding:3px 8px;border-radius:6px;background:${stock ? '#16a34a' : '#dc2626'};color:#ffffff;font-weight:700;">${stock ? 'Stock' : 'Demo'}</span>${row.soldAt ? '<br><span style="display:inline-block;margin-top:6px;padding:3px 8px;border-radius:6px;background:#374151;color:#ffffff;font-weight:700;">Sold</span>' : ''}</td>
+        <td style="${cell}">${row.dayNumber}</td>
+        <td style="${cell}">${escapeHtml(row.status)}</td>
+        <td style="${cell}">${dayLabel(row.daysTo90)}<br><span style="color:#6b7280;font-size:12px;">${formatUkDate(new Date(row.day90))}</span></td>
+        <td style="${cell}">${dayLabel(row.daysTo360)}<br><span style="color:#6b7280;font-size:12px;">${formatUkDate(new Date(row.day360))}</span></td>
+        <td style="${cell}">${formatMoney(row.outstandingAmount)}</td>
+        <td style="${cell}">${formatMoney(row.interestToDate)}</td>
+        <td style="${cell}">${formatMoney(row.closingBalance)}</td>
+      </tr>`;
+    })
     .join('');
 
   const appUrl = process.env.FRONTEND_URL || 'https://video.hestonautomotive.com';
   await sendEmail({
     to: recipients,
-    subject: `Days to sell test: ${rows.length} vehicles still in the window`,
+    subject: `Days to sell test: ${unsold.length} unsold, ${sold.length} sold`,
     html: `
       <div style="font-family:Arial,sans-serif;color:#1f2937;">
         <h2 style="margin:0 0 8px;">Days to sell</h2>
-        <p style="margin:0 0 16px;">Test email. ${rows.length} vehicles are still unsold. ${past90} are past the 90-day mark and ${dueSoon} reach it within 14 days.</p>
+        <p style="margin:0 0 16px;">Test email. ${unsold.length} vehicles are still unsold and ${sold.length} are marked sold. ${past90} unsold are past the 90-day mark and ${dueSoon} reach it within 14 days. Stock is green, Demo is red.</p>
         <table style="border-collapse:collapse;width:100%;font-size:14px;">
           <thead>
             <tr style="background:#f3f4f6;text-align:left;">
-              <th style="padding:8px 10px;">VIN</th>
-              <th style="padding:8px 10px;">Type</th>
-              <th style="padding:8px 10px;">Invoice</th>
+              <th style="padding:8px 10px;">Vehicle</th>
+              <th style="padding:8px 10px;">Status</th>
+              <th style="padding:8px 10px;">Day</th>
+              <th style="padding:8px 10px;">Stage</th>
               <th style="padding:8px 10px;">90 days</th>
               <th style="padding:8px 10px;">360 days</th>
-              <th style="padding:8px 10px;">Outstanding</th>
+              <th style="padding:8px 10px;">Balance</th>
+              <th style="padding:8px 10px;">Interest</th>
+              <th style="padding:8px 10px;">Closing</th>
             </tr>
           </thead>
           <tbody>${body}</tbody>
@@ -172,5 +194,5 @@ export async function sendSaleWindowReminder() {
     `,
   });
 
-  return { sent: true, recipients, count: rows.length };
+  return { sent: true, recipients, count: rows.length, unsold: unsold.length, sold: sold.length };
 }
