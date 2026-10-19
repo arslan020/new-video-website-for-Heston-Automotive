@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FaHome, FaVideo, FaCar, FaCog, FaUsersCog, FaHistory, FaEye, FaShippingFast } from 'react-icons/fa';
+import { FaHome, FaVideo, FaCar, FaCog, FaUsersCog, FaHistory, FaEye, FaShippingFast, FaHourglassHalf } from 'react-icons/fa';
 
 interface SidebarProps {
   role: 'admin' | 'staff';
@@ -13,6 +13,7 @@ const adminMenu = [
   { icon: FaHome, label: 'Dashboard', path: '/admin' },
   { icon: FaCar, label: 'Browse Vehicles', path: '/admin/stock' },
   { icon: FaShippingFast, label: 'Changan Tracker', path: '/admin/changan' },
+  { icon: FaHourglassHalf, label: 'Days to Sell', path: '/admin/days-to-sell' },
   { icon: FaVideo, label: 'Uploaded Videos', path: '/staff/videos' },
   { icon: FaUsersCog, label: 'Manage Staff', path: '/admin/staff' },
   { icon: FaHistory, label: 'Activity Logs', path: '/admin/activity-logs' },
@@ -24,6 +25,7 @@ const staffMenu = [
   { icon: FaHome, label: 'Dashboard', path: '/staff' },
   { icon: FaCar, label: 'Browse Vehicles', path: '/staff/stock' },
   { icon: FaShippingFast, label: 'Changan Tracker', path: '/staff/changan' },
+  { icon: FaHourglassHalf, label: 'Days to Sell', path: '/staff/days-to-sell' },
   { icon: FaVideo, label: 'My Videos', path: '/staff/videos' },
   { icon: FaEye, label: 'Customer Views', path: '/staff/views' },
   { icon: FaCog, label: 'Settings', path: '/staff/settings' },
