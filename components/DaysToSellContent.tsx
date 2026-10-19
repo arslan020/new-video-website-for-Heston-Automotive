@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/components/ToastProvider';
 
@@ -10,6 +10,7 @@ type Vehicle = {
   vin: string;
   vehicleType: 'Stock' | 'Demo';
   invoiceDate: string;
+  financingDate: string;
   dayNumber: number;
   status: string;
   day90: string;
@@ -55,6 +56,28 @@ function dayClass(days: number) {
   return 'text-gray-900';
 }
 
+function dateInputValue(value: string) {
+  return value ? value.slice(0, 10) : '';
+}
+
+type VehicleForm = {
+  invoiceNumber: string;
+  vin: string;
+  vehicleType: 'Stock' | 'Demo';
+  invoiceDate: string;
+  financingDate: string;
+  outstandingAmount: string;
+};
+
+const emptyForm: VehicleForm = {
+  invoiceNumber: '',
+  vin: '',
+  vehicleType: 'Stock',
+  invoiceDate: '',
+  financingDate: '',
+  outstandingAmount: '',
+};
+
 export default function DaysToSellContent() {
   const { user } = useAuth();
   const { showToast } = useToast();
@@ -65,14 +88,9 @@ export default function DaysToSellContent() {
   const [sendingTest, setSendingTest] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [adding, setAdding] = useState(false);
-  const [form, setForm] = useState({
-    invoiceNumber: '',
-    vin: '',
-    vehicleType: 'Stock' as 'Stock' | 'Demo',
-    invoiceDate: '',
-    financingDate: '',
-    outstandingAmount: '',
-  });
+  const [form, setForm] = useState<VehicleForm>(emptyForm);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<VehicleForm>(emptyForm);
 
   const load = useCallback(async () => {
     if (!user?.token) return;
@@ -189,14 +207,7 @@ export default function DaysToSellContent() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to add');
-      setForm({
-        invoiceNumber: '',
-        vin: '',
-        vehicleType: 'Stock',
-        invoiceDate: '',
-        financingDate: '',
-        outstandingAmount: '',
-      });
+      setForm(emptyForm);
       setShowForm(false);
       showToast('Vehicle added', 'success');
       load();
@@ -205,6 +216,46 @@ export default function DaysToSellContent() {
       showToast(error instanceof Error ? error.message : 'Could not add the vehicle', 'error');
     } finally {
       setAdding(false);
+    }
+  };
+
+  const startEdit = (vehicle: Vehicle) => {
+    setEditingId(vehicle.id);
+    setEditForm({
+      invoiceNumber: vehicle.invoiceNumber,
+      vin: vehicle.vin,
+      vehicleType: vehicle.vehicleType === 'Demo' ? 'Demo' : 'Stock',
+      invoiceDate: dateInputValue(vehicle.invoiceDate),
+      financingDate: dateInputValue(vehicle.financingDate || vehicle.invoiceDate),
+      outstandingAmount: vehicle.outstandingAmount.toFixed(2),
+    });
+  };
+
+  const saveEdit = async () => {
+    if (!user?.token || !editingId) return;
+    setSavingId(editingId);
+    try {
+      const res = await fetch(`/api/sale-window/${editingId}`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...editForm,
+          outstandingAmount: Number(editForm.outstandingAmount),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to update');
+      setEditingId(null);
+      showToast('Vehicle updated', 'success');
+      load();
+    } catch (error) {
+      console.error(error);
+      showToast(error instanceof Error ? error.message : 'Could not update the vehicle', 'error');
+    } finally {
+      setSavingId(null);
     }
   };
 
@@ -356,7 +407,8 @@ export default function DaysToSellContent() {
               </thead>
               <tbody>
                 {vehicles.map((vehicle) => (
-                  <tr key={vehicle.id} className={vehicle.soldAt ? 'bg-gray-50 text-gray-400' : 'border-t border-gray-100'}>
+                  <Fragment key={vehicle.id}>
+                  <tr className={vehicle.soldAt ? 'bg-gray-50 text-gray-400' : 'border-t border-gray-100'}>
                     <td className="px-4 py-3">
                       <p className="font-medium text-gray-900">{vehicle.vin}</p>
                       <p className="text-xs text-gray-500">
@@ -392,16 +444,111 @@ export default function DaysToSellContent() {
                     <td className="px-4 py-3">{formatMoney(vehicle.interestToDate)}</td>
                     <td className="px-4 py-3">{formatMoney(vehicle.closingBalance)}</td>
                     <td className="px-4 py-3 text-right">
-                      <button
-                        type="button"
-                        disabled={savingId === vehicle.id}
-                        onClick={() => markSold(vehicle, !vehicle.soldAt)}
-                        className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                      >
-                        {vehicle.soldAt ? 'Undo sold' : 'Mark sold'}
-                      </button>
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          disabled={savingId === vehicle.id}
+                          onClick={() => (editingId === vehicle.id ? setEditingId(null) : startEdit(vehicle))}
+                          className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                        >
+                          {editingId === vehicle.id ? 'Close' : 'Edit'}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={savingId === vehicle.id}
+                          onClick={() => markSold(vehicle, !vehicle.soldAt)}
+                          className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                        >
+                          {vehicle.soldAt ? 'Undo sold' : 'Mark sold'}
+                        </button>
+                      </div>
                     </td>
                   </tr>
+                  {editingId === vehicle.id ? (
+                    <tr className="border-t border-gray-100 bg-gray-50">
+                      <td colSpan={10} className="px-4 py-4">
+                        <form
+                          className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+                          onSubmit={(event) => {
+                            event.preventDefault();
+                            saveEdit();
+                          }}
+                        >
+                          <label className="text-sm text-gray-600">
+                            Invoice number
+                            <input
+                              required
+                              value={editForm.invoiceNumber}
+                              onChange={(event) => setEditForm({ ...editForm, invoiceNumber: event.target.value })}
+                              className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900"
+                            />
+                          </label>
+                          <label className="text-sm text-gray-600">
+                            VIN
+                            <input
+                              required
+                              value={editForm.vin}
+                              onChange={(event) => setEditForm({ ...editForm, vin: event.target.value.toUpperCase() })}
+                              className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900"
+                            />
+                          </label>
+                          <label className="text-sm text-gray-600">
+                            Status
+                            <select
+                              value={editForm.vehicleType}
+                              onChange={(event) => setEditForm({ ...editForm, vehicleType: event.target.value as 'Stock' | 'Demo' })}
+                              className={`mt-1 w-full rounded-lg px-3 py-2 font-medium text-white ${editForm.vehicleType === 'Demo' ? 'bg-red-600' : 'bg-green-600'}`}
+                            >
+                              <option value="Stock">Stock</option>
+                              <option value="Demo">Demo</option>
+                            </select>
+                          </label>
+                          <label className="text-sm text-gray-600">
+                            Invoice date
+                            <input
+                              required
+                              type="date"
+                              value={editForm.invoiceDate}
+                              onChange={(event) => setEditForm({ ...editForm, invoiceDate: event.target.value })}
+                              className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900"
+                            />
+                          </label>
+                          <label className="text-sm text-gray-600">
+                            Financing date
+                            <input
+                              required
+                              type="date"
+                              value={editForm.financingDate}
+                              onChange={(event) => setEditForm({ ...editForm, financingDate: event.target.value })}
+                              className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900"
+                            />
+                          </label>
+                          <label className="text-sm text-gray-600">
+                            Outstanding amount
+                            <input
+                              required
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={editForm.outstandingAmount}
+                              onChange={(event) => setEditForm({ ...editForm, outstandingAmount: event.target.value })}
+                              className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900"
+                            />
+                          </label>
+                          <div className="sm:col-span-2 lg:col-span-3">
+                            <button
+                              type="submit"
+                              disabled={savingId === vehicle.id}
+                              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                            >
+                              {savingId === vehicle.id ? 'Saving...' : 'Save changes'}
+                            </button>
+                          </div>
+                        </form>
+                      </td>
+                    </tr>
+                  ) : null}
+                  </Fragment>
                 ))}
               </tbody>
             </table>

@@ -97,24 +97,20 @@ export function toView(record: ISaleWindow, today = utcToday()): SaleWindowView 
 export async function ensureSaleWindows() {
   await SaleWindow.collection.updateMany({ vehicleType: 'New' }, { $set: { vehicleType: 'Stock' } });
   for (const row of SALE_WINDOW_SEED) {
-    await SaleWindow.updateOne(
-      { vin: row.vin },
-      {
-        $set: {
-          invoiceNumber: row.invoiceNumber,
-          invoiceDate: new Date(row.invoiceDate),
-          financingDate: new Date(row.financingDate),
-          initialAmount: row.initialAmount,
-          outstandingAmount: row.outstandingAmount,
-        },
-        $setOnInsert: {
-          vin: row.vin,
-          vehicleType: row.vehicleType,
-          soldAt: null,
-        },
-      },
-      { upsert: true }
-    );
+    const exists = await SaleWindow.findOne({
+      $or: [{ vin: row.vin }, { invoiceNumber: row.invoiceNumber }],
+    });
+    if (exists) continue;
+    await SaleWindow.create({
+      invoiceNumber: row.invoiceNumber,
+      vin: row.vin,
+      invoiceDate: new Date(row.invoiceDate),
+      financingDate: new Date(row.financingDate),
+      vehicleType: row.vehicleType,
+      initialAmount: row.initialAmount,
+      outstandingAmount: row.outstandingAmount,
+      soldAt: null,
+    });
   }
 }
 
