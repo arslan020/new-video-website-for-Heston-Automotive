@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import DashboardLayout from '@/components/DashboardLayout';
+import { PageTitle } from '@/components/ui/PageTitle';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useToast } from '@/components/ToastProvider';
 import {
@@ -335,11 +336,10 @@ function AdminStockContent() {
   return (
     <div className="w-full px-3 sm:px-6 pb-12">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-5 sm:mb-8">
-        <div>
-          <h1 className="text-xl sm:text-3xl font-bold text-gray-800">Stock Status</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage your vehicle inventory and video status.</p>
-          {lastSync && <p className="text-xs text-gray-400 mt-0.5">Last sync: {new Date(lastSync).toLocaleString()}</p>}
-        </div>
+        <PageTitle title="Stock Status">
+          <p>Manage your vehicle inventory and video status.</p>
+          {lastSync ? <p className="mt-1">Last sync: {new Date(lastSync).toLocaleString()}</p> : null}
+        </PageTitle>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
@@ -412,7 +412,7 @@ function AdminStockContent() {
                             </div>
                             <div className="min-w-0">
                               <h3 className="font-bold text-gray-800 text-xs sm:text-sm truncate">{vData.make} {vData.model}</h3>
-                              <p className="text-xs text-blue-600 font-mono font-medium">{vData.registration || '—'}</p>
+                              <p className="text-xs text-blue-600 font-mono font-medium">{vData.registration || '-'}</p>
                               {/* Details inline on small screens */}
                               <div className="md:hidden mt-1 space-y-0.5">
                                 <p className="text-xs text-gray-500 truncate">{vData.derivative || ''}</p>
@@ -423,10 +423,10 @@ function AdminStockContent() {
                         </td>
                         <td className="hidden md:table-cell px-6 py-4">
                           <div className="space-y-1">
-                            <p className="text-sm text-gray-600">{vData.derivative || '—'}</p>
+                            <p className="text-sm text-gray-600">{vData.derivative || '-'}</p>
                             <div className="flex items-center gap-2 text-xs text-gray-500">
                               <span className="px-2 py-0.5 bg-gray-100 rounded border border-gray-200">
-                                {vData.mileage ? `${vData.mileage.toLocaleString()} miles` : '—'}
+                                {vData.mileage ? `${vData.mileage.toLocaleString()} miles` : '-'}
                               </span>
                             </div>
                           </div>
@@ -689,7 +689,7 @@ function AdminStockContent() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Vehicle</label>
                 <p className="text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded border border-gray-200">
-                  {getVehicleData(reserveLinkItem).make} {getVehicleData(reserveLinkItem).model} — {getVehicleData(reserveLinkItem).registration}
+                  {getVehicleData(reserveLinkItem).make} {getVehicleData(reserveLinkItem).model}, {getVehicleData(reserveLinkItem).registration}
                 </p>
               </div>
               <div>

@@ -2,6 +2,7 @@
 
 import { Fragment, useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { PageTitle } from '@/components/ui/PageTitle';
 import {
   FaEye,
   FaUser,
@@ -266,15 +267,8 @@ export default function CustomerViewsContent({ isAdmin }: Props) {
 
   return (
     <div className="w-full px-6">
-      <header className="mb-6 md:mb-8 border-b pb-4 border-gray-200">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Customer Views</h1>
-            <p className="text-sm md:text-base text-gray-500 mt-1">
-              Track who opened your shared video links and when.
-            </p>
-          </div>
-        </div>
+      <header className="mb-6 md:mb-8">
+        <PageTitle title="Customer Views">Track who opened your shared video links and when.</PageTitle>
       </header>
 
       <div className="grid grid-cols-3 gap-4 mb-8">
@@ -474,7 +468,7 @@ export default function CustomerViewsContent({ isAdmin }: Props) {
                           <td className="px-5 py-3.5 text-xs text-gray-500">
                             {shareIdRaw && typeof shareIdRaw === 'object' && shareIdRaw.user
                               ? shareIdRaw.user.name || shareIdRaw.user.username
-                              : view.uploadedBy?.name || view.uploadedBy?.username || '—'}
+                              : view.uploadedBy?.name || view.uploadedBy?.username || '-'}
                           </td>
                         )}
 
@@ -535,7 +529,7 @@ export default function CustomerViewsContent({ isAdmin }: Props) {
                               )}
                             </div>
                           ) : (
-                            <span className="text-xs text-gray-300 italic">—</span>
+                            <span className="text-xs text-gray-300 italic">-</span>
                           )}
                         </td>
 
@@ -565,7 +559,7 @@ export default function CustomerViewsContent({ isAdmin }: Props) {
                         >
                           <div className="flex items-center justify-end gap-2">
                             {!isAdmin ? (
-                              <span className="text-xs text-gray-300 italic">—</span>
+                              <span className="text-xs text-gray-300 italic">-</span>
                             ) : shareIdStr ? (
                               <button
                                 type="button"

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import DashboardLayout from '@/components/DashboardLayout';
+import { PageTitle } from '@/components/ui/PageTitle';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import UKPhoneInput from '@/components/UKPhoneInput';
 import {
@@ -215,10 +216,7 @@ function ManageStaffContent() {
     <DashboardLayout>
       <div className="w-full px-3 sm:px-6 pb-12">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-5 sm:mb-8">
-          <div>
-            <h1 className="text-xl sm:text-3xl font-bold text-gray-800">Staff</h1>
-            <p className="text-sm text-gray-500 mt-1">Manage your staff members and their account permissions.</p>
-          </div>
+          <PageTitle title="Staff">Manage your staff members and their account permissions.</PageTitle>
           <div className="flex gap-3">
             <button
               type="button"

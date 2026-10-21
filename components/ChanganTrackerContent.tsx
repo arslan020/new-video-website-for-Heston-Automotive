@@ -6,6 +6,7 @@ import { useToast } from '@/components/ToastProvider';
 import { TRACKING_STAGES } from '@/lib/trackingStages';
 import { coloursForVehicle, matchStockColour } from '@/lib/exteriorColours';
 import UKPhoneInput from '@/components/UKPhoneInput';
+import { PageTitle } from '@/components/ui/PageTitle';
 import { FaCar, FaLink, FaCheck, FaSync, FaPaperPlane, FaTimes, FaPlus, FaTrash, FaCommentDots } from 'react-icons/fa';
 
 interface StockVehicle {
@@ -682,12 +683,9 @@ export default function ChanganTrackerContent() {
   return (
     <div className="w-full px-3 sm:px-6 pb-12">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-5 sm:mb-8">
-        <div>
-          <h1 className="text-xl sm:text-3xl font-bold text-gray-800">Changan Tracker</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Track Changan vehicles through to handover and share live status links with customers.
-          </p>
-        </div>
+        <PageTitle title="Changan Tracker">
+          Track Changan vehicles through to handover and share live status links with customers.
+        </PageTitle>
         <button
           type="button"
           onClick={() => fetchData(true)}

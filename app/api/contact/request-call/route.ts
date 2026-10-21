@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
 
     await sendEmail({
       to: 'rashid@hestonautomotive.com',
-      subject: `📞 Call Request: ${vehicleDetails?.make} ${vehicleDetails?.model} — ${formattedName}`,
+      subject: `📞 Call Request: ${vehicleDetails?.make} ${vehicleDetails?.model}, ${formattedName}`,
       html: `
         <div style="font-family:Arial,sans-serif;max-width:600px;color:#333;">
           <h2>📞 New Call Request</h2>

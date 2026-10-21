@@ -3,11 +3,12 @@
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import DashboardLayout from '@/components/DashboardLayout';
+import { PageTitle } from '@/components/ui/PageTitle';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useRouter } from 'next/navigation';
 import {
     FaUser, FaEnvelope, FaPhone, FaShieldAlt, FaEdit, FaLock,
-    FaTimes, FaSignOutAlt, FaCheckCircle, FaCog, FaUserShield
+    FaTimes, FaSignOutAlt, FaCheckCircle, FaUserShield
 } from 'react-icons/fa';
 
 export default function StaffSettingsPage() {
@@ -85,13 +86,7 @@ function StaffSettingsContent() {
             <div className="w-full pb-12 px-3 sm:px-6">
                 {/* Page Header */}
                 <div className="mb-6 sm:mb-8">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg">
-                            <FaCog className="text-white text-lg sm:text-xl" />
-                        </div>
-                        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Settings</h1>
-                    </div>
-                    <p className="text-sm sm:text-base text-gray-500 ml-0 sm:ml-14">Manage your account settings and preferences</p>
+                    <PageTitle title="Settings">Manage your account settings and preferences</PageTitle>
                 </div>
 
                 {/* Message Toast */}

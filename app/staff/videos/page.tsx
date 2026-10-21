@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import DashboardLayout from '@/components/DashboardLayout';
+import { PageTitle } from '@/components/ui/PageTitle';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useToast } from '@/components/ToastProvider';
 import { useSearchParams } from 'next/navigation';
@@ -552,12 +553,9 @@ function MyVideosContent() {
 
   return (
     <div className="w-full px-3 sm:px-6">
-      <header className="mb-4 sm:mb-6 md:mb-8 border-b pb-4 border-gray-200">
+      <header className="mb-4 sm:mb-6 md:mb-8">
         <div className="flex items-start sm:items-center justify-between gap-3">
-          <div>
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800">My Uploaded Videos</h1>
-            <p className="text-sm text-gray-500 mt-1 hidden sm:block">Manage and share your car videos.</p>
-          </div>
+          <PageTitle title="My Uploaded Videos">Manage and share your car videos.</PageTitle>
           <div className="flex items-center gap-3 sm:gap-6">
             <div className="relative hidden sm:block w-48 md:w-64">
               <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
@@ -1236,7 +1234,7 @@ function MyVideosContent() {
               {!reserveLinkVideo?.registration && (
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
                   <p className="text-xs text-amber-700">
-                    ⚠️ This video has no registration number — reserve link requires one.
+                    ⚠️ This video has no registration number. Reserve link requires one.
                   </p>
                 </div>
               )}

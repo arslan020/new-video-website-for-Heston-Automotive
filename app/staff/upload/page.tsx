@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import DashboardLayout from '@/components/DashboardLayout';
+import { PageTitle } from '@/components/ui/PageTitle';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useToast } from '@/components/ToastProvider';
 
@@ -168,10 +169,7 @@ function UploadContent() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6 px-0 sm:px-0">
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Upload Video</h1>
-        <p className="text-sm text-gray-500 mt-1">Add a new vehicle video to the portal</p>
-      </div>
+      <PageTitle title="Upload Video">Add a new vehicle video to the portal</PageTitle>
 
       {done ? (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sm:p-10 text-center">

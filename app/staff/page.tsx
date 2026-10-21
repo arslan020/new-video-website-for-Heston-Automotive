@@ -4,7 +4,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useAuth } from '@/context/AuthContext';
-import { FaVideo, FaLink, FaCar, FaEye, FaClock, FaChartLine, FaTimes, FaArrowRight, FaFire, FaTrophy, FaCalendarAlt, FaPlay, FaUser } from 'react-icons/fa';
+import { FaLink, FaCar, FaEye, FaTimes, FaUser } from 'react-icons/fa';
+import NeedsAttention from '@/components/NeedsAttention';
+import { Card } from '@/components/ui/Card';
+import { StatCard } from '@/components/ui/StatCard';
+import { Badge } from '@/components/ui/Badge';
+import { RegChip } from '@/components/ui/RegChip';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { PageTitle } from '@/components/ui/PageTitle';
 import { useToast } from '@/components/ToastProvider';
 
 interface VideoView {
@@ -29,6 +36,67 @@ interface Video {
     views?: VideoView[];
     make?: string;
     deletedAt?: string;
+}
+
+function videoName(video: Video) {
+    let displayName = video.title || video.originalName || 'Untitled Video';
+    if (video.registration) {
+        displayName = displayName.replace(new RegExp(`\\s*-\\s*${video.registration}`, 'i'), '');
+    }
+    return displayName;
+}
+
+function videoThumb(video: Video) {
+    const isDeleted = !!video.deletedAt || (!video.videoUrl && !video.cloudflareVideoId && !video.youtubeVideoId);
+    if (isDeleted) return null;
+    return video.thumbnailUrl ||
+        (video.videoSource === 'cloudflare' && video.cloudflareVideoId
+            ? `https://videodelivery.net/${video.cloudflareVideoId}/thumbnails/thumbnail.jpg?time=1s&height=200`
+            : video.youtubeVideoId
+                ? `https://img.youtube.com/vi/${video.youtubeVideoId}/mqdefault.jpg`
+                : null);
+}
+
+function brandLogo(video: Video) {
+    if (!video.make) return null;
+    const slug = video.make.toLowerCase().trim().replace(/\s+/g, '-');
+    return `https://raw.githubusercontent.com/filippofilip95/car-logos-dataset/master/logos/optimized/${slug}.png`;
+}
+
+function Thumb({ video }: { video: Video }) {
+    const [failed, setFailed] = useState(false);
+    const [logoFailed, setLogoFailed] = useState(false);
+    const src = videoThumb(video);
+    const logo = brandLogo(video);
+    if (src && !failed) {
+        return (
+            <img
+                src={src}
+                alt=""
+                className="h-9 w-14 shrink-0 rounded object-cover"
+                onError={() => setFailed(true)}
+            />
+        );
+    }
+    if (logo && !logoFailed) {
+        return (
+            <span className="flex h-9 w-14 shrink-0 items-center justify-center rounded border border-[#E2E8F0] bg-white">
+                <img src={logo} alt="" className="h-6 w-6 object-contain" onError={() => setLogoFailed(true)} />
+            </span>
+        );
+    }
+    return (
+        <span className="flex h-9 w-14 shrink-0 items-center justify-center rounded bg-[#E8ECF1] text-[#64748B]">
+            <FaCar size={12} />
+        </span>
+    );
+}
+
+function ageTone(createdAt: string) {
+    const days = Math.max(0, Math.floor((Date.now() - new Date(createdAt).getTime()) / 86400000));
+    if (days > 120) return { days, tone: 'red' as const };
+    if (days > 60) return { days, tone: 'amber' as const };
+    return { days, tone: 'grey' as const };
 }
 
 interface StockItem {
@@ -134,7 +202,7 @@ const StaffDashboard = () => {
         if (!reserveLinkVideo) return;
         const normReg = (reserveLinkVideo.registration || '').replace(/\s/g, '').toUpperCase();
         if (!normReg) {
-            showToast('This video has no registration number — cannot set a reserve link.', 'error');
+            showToast('This video has no registration number. Cannot set a reserve link.', 'error');
             return;
         }
         setSavingReserveLink(true);
@@ -206,306 +274,173 @@ const StaffDashboard = () => {
         })
         .reduce((sum, v) => sum + (v.viewCount || 0), 0);
 
-    const VideoCard = ({ video, showRank, rank, showDate }: { video: Video; showRank?: boolean; rank?: number; showDate?: boolean }) => {
-        const normReg = (video.registration || '').replace(/\s/g, '').toUpperCase();
-        const isSold = normReg && stockRegs.size > 0 && !stockRegs.has(normReg);
-        let displayName = video.title || video.originalName || 'Untitled Video';
-        if (video.registration) {
-            const regPattern = new RegExp(`\\s*-\\s*${video.registration}`, 'i');
-            displayName = displayName.replace(regPattern, '');
-        }
-        const isDeleted = !!video.deletedAt || (!video.videoUrl && !video.cloudflareVideoId && !video.youtubeVideoId);
-        const brandLogoUrl = video.make
-            ? `https://raw.githubusercontent.com/filippofilip95/car-logos-dataset/master/logos/optimized/${video.make.toLowerCase().trim().replace(/\s+/g, '-')}.png`
-            : null;
-        const thumbSrc = isDeleted ? null : (video.thumbnailUrl ||
-            (video.videoSource === 'cloudflare' && video.cloudflareVideoId
-                ? `https://videodelivery.net/${video.cloudflareVideoId}/thumbnails/thumbnail.jpg?time=1s&height=200`
-                : video.youtubeVideoId
-                    ? `https://img.youtube.com/vi/${video.youtubeVideoId}/mqdefault.jpg`
-                    : null));
-
-        return (
-            <div
-                className="group flex items-center gap-3 p-2.5 rounded-xl border border-gray-100 hover:border-gray-200 hover:bg-gray-50 transition-all cursor-pointer"
-                onClick={() => router.push(`/staff/videos?videoId=${video._id}`)}
-            >
-                {/* Rank */}
-                {showRank && rank && (
-                    <span className="flex-shrink-0 w-5 text-center text-sm">
-                        {rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : <span className="text-xs font-bold text-gray-400">{rank}</span>}
-                    </span>
-                )}
-
-                {/* Thumbnail */}
-                <div
-                    className={`relative w-20 h-14 flex-shrink-0 rounded-lg overflow-hidden ${!thumbSrc && brandLogoUrl ? 'bg-white' : 'bg-gray-900'}`}
-                    onClick={(e) => { e.stopPropagation(); setSelectedVideo(video); }}
-                >
-                    {thumbSrc ? (
-                        <img
-                            src={thumbSrc}
-                            alt={displayName}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            onError={(e) => { (e.target as HTMLImageElement).onerror = null; (e.target as HTMLImageElement).src = 'https://via.placeholder.com/120x80?text=Video'; }}
-                        />
-                    ) : brandLogoUrl ? (
-                        <img
-                            src={brandLogoUrl}
-                            alt={video.make}
-                            className="w-full h-full object-contain p-1"
-                            onError={(e) => { (e.target as HTMLImageElement).onerror = null; (e.target as HTMLImageElement).style.display = 'none'; }}
-                        />
-                    ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                            <FaVideo className="text-gray-600" size={16} />
-                        </div>
-                    )}
-                    {!isDeleted && (
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
-                            <div className="w-6 h-6 rounded-full bg-white/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow">
-                                <FaPlay className="text-gray-800 ml-0.5" size={8} />
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-900 text-sm truncate leading-tight">{displayName}</p>
-                    <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                        {video.registration && (
-                            <span className="text-xs font-mono text-blue-600">{video.registration}</span>
-                        )}
-                        {isSold && (
-                            <span className="px-1.5 py-0.5 bg-red-50 text-red-600 text-xs font-semibold rounded border border-red-200">Sold</span>
-                        )}
-                        {showDate && video.createdAt && (
-                            <span className="text-xs text-orange-500 font-medium">
-                                {new Date(video.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                            </span>
-                        )}
-                    </div>
-                </div>
-
-                {/* Views */}
-                <div className="flex-shrink-0 inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-semibold">
-                    <FaEye size={9} />
-                    {video.viewCount || 0}
-                </div>
-            </div>
-        );
+    const activeVideos = allVideos.filter(v => !v.deletedAt);
+    const isSoldVideo = (video: Video) => {
+        const reg = (video.registration || '').replace(/\s/g, '').toUpperCase();
+        return Boolean(reg && stockRegs.size > 0 && !stockRegs.has(reg));
     };
+    const soldVideoCount = activeVideos.filter(isSoldVideo).length;
+    const liveVideoCount = activeVideos.length - soldVideoCount;
+    const videoRegs = new Set(
+        activeVideos.map(video => (video.registration || '').replace(/\s/g, '').toUpperCase()).filter(Boolean)
+    );
+    const carsWithoutVideo = stock.filter(item => {
+        const reg = (item.vehicle?.registration || '').replace(/\s/g, '').toUpperCase();
+        return !reg || !videoRegs.has(reg);
+    }).length;
+    const lastUploadAt = activeVideos.reduce<string | null>((latest, video) => {
+        if (!latest || new Date(video.createdAt) > new Date(latest)) return video.createdAt;
+        return latest;
+    }, null);
+    const lastUploadLabel = lastUploadAt
+        ? new Date(lastUploadAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+        : null;
+
+    const recentRows = recentVideos.slice(0, 20);
+    const viewedRows = topVideos.slice(0, 20);
+    const maxViews = Math.max(1, ...viewedRows.map((video) => video.viewCount || 0));
+    const agedRows = agedVideos.slice(0, 20);
+    const firstName = (user?.name || 'there').split(' ')[0];
 
     return (
         <DashboardLayout>
-            <div className="w-full px-3 sm:px-6 pb-10">
+            <div className="w-full pb-8">
 
-                {/* Header */}
-                <header className="mb-5 md:mb-8 border-b pb-4 sm:pb-5 border-gray-200 animate-fadeIn">
-                    <div className="flex items-center justify-between gap-4 flex-wrap">
-                        <div>
-                            <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold text-gray-900 tracking-tight">
-                                {getGreeting()}, {user?.name || 'there'} 👋
-                            </h1>
-                            <p className="text-xs sm:text-sm text-gray-400 mt-1 flex items-center gap-1.5">
-                                <FaCalendarAlt size={11} />
-                                {getTodayDate()}
-                            </p>
-                        </div>
+                <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
+                    <PageTitle title={`${getGreeting()}, ${firstName}`}>{getTodayDate()}</PageTitle>
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={() => router.push('/staff/stock')}
+                            className="h-10 rounded-lg border border-[#E2E8F0] bg-white px-4 text-sm font-medium text-[#0F172A]"
+                        >
+                            Sync stock
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => router.push('/staff/upload')}
+                            className="h-10 rounded-lg bg-[#0B3D73] px-4 text-sm font-medium text-white hover:bg-[#072A50]"
+                        >
+                            Upload video
+                        </button>
                     </div>
                 </header>
 
-                {/* Stat Cards */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
-                    <div
+                <div className="mb-4 grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
+                    <StatCard
+                        label="Cars in stock"
+                        value={stock.length}
                         onClick={() => router.push('/staff/stock')}
-                        className="cursor-pointer p-4 sm:p-5 bg-green-500 rounded-2xl shadow-lg shadow-green-500/30 text-white transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-green-500/40"
-                    >
-                        <div className="flex items-start justify-between gap-3">
-                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/20 flex items-center justify-center border border-white/10">
-                                <FaCar className="text-white" size={15} />
-                            </div>
-                            <FaChartLine size={14} className="text-white/60 mt-1" />
-                        </div>
-                        <div className="mt-3 sm:mt-4">
-                            <div className="text-2xl sm:text-3xl font-bold leading-tight tracking-tight">{stock.length}</div>
-                            <div className="mt-1 text-xs font-medium text-green-100">Cars in Stock</div>
-                        </div>
-                        <div className="mt-2 sm:mt-3 flex items-center gap-1 text-green-100 text-xs">
-                            <span>View stock</span>
-                            <FaArrowRight size={9} />
-                        </div>
-                    </div>
-
-                    <div
+                        helper={<span className="text-[#92400E]">{carsWithoutVideo} without a video</span>}
+                    />
+                    <StatCard
+                        label="Videos uploaded"
+                        value={activeVideos.length}
                         onClick={() => router.push('/staff/videos')}
-                        className="cursor-pointer p-4 sm:p-5 bg-blue-500 rounded-2xl shadow-lg shadow-blue-500/30 text-white transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-500/40"
-                    >
-                        <div className="flex items-start justify-between gap-3">
-                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/20 flex items-center justify-center border border-white/10">
-                                <FaVideo className="text-white" size={15} />
-                            </div>
-                            <FaChartLine size={14} className="text-white/60 mt-1" />
-                        </div>
-                        <div className="mt-3 sm:mt-4">
-                            <div className="text-2xl sm:text-3xl font-bold leading-tight tracking-tight">{allVideos.filter(v => !v.deletedAt).length}</div>
-                            <div className="mt-1 text-xs font-medium text-blue-100">Total Videos</div>
-                        </div>
-                        <div className="mt-2 sm:mt-3 flex items-center gap-1 text-blue-100 text-xs">
-                            <span>View all</span>
-                            <FaArrowRight size={9} />
-                        </div>
-                    </div>
-
-                    <div
+                        helper={<span className="text-[#64748B]">{liveVideoCount} live · {soldVideoCount} sold</span>}
+                    />
+                    <StatCard
+                        label="Video views"
+                        value={totalViews}
                         onClick={() => router.push('/staff/views')}
-                        className="cursor-pointer p-4 sm:p-5 bg-purple-500 rounded-2xl shadow-lg shadow-purple-500/30 text-white transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-purple-500/40"
-                    >
-                        <div className="flex items-start justify-between gap-3">
-                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/20 flex items-center justify-center border border-white/10">
-                                <FaEye className="text-white" size={15} />
-                            </div>
-                            <FaChartLine size={14} className="text-white/60 mt-1" />
-                        </div>
-                        <div className="mt-3 sm:mt-4">
-                            <div className="text-2xl sm:text-3xl font-bold leading-tight tracking-tight">{totalViews}</div>
-                            <div className="mt-1 text-xs font-medium text-purple-100">Total Views</div>
-                        </div>
-                        <div className="mt-2 sm:mt-3 flex items-center gap-1 text-purple-100 text-xs">
-                            <span>Analytics</span>
-                            <FaArrowRight size={9} />
-                        </div>
-                    </div>
-
-                    <div
+                        helper={<span className="text-[#0B3D73]">Open customer views</span>}
+                    />
+                    <StatCard
+                        label="Uploads this week"
+                        value={videosThisWeek}
                         onClick={() => router.push('/staff/videos')}
-                        className="cursor-pointer p-4 sm:p-5 bg-orange-500 rounded-2xl shadow-lg shadow-orange-500/30 text-white transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-orange-500/40"
-                    >
-                        <div className="flex items-start justify-between gap-3">
-                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/20 flex items-center justify-center border border-white/10">
-                                <FaClock className="text-white" size={15} />
-                            </div>
-                            <FaFire size={14} className="text-white/60 mt-1" />
-                        </div>
-                        <div className="mt-3 sm:mt-4">
-                            <div className="text-2xl sm:text-3xl font-bold leading-tight tracking-tight">{videosThisWeek}</div>
-                            <div className="mt-1 text-xs font-medium text-orange-100">This Week</div>
-                        </div>
-                        <div className="mt-2 sm:mt-3 flex items-center gap-1 text-orange-100 text-xs">
-                            <span className="hidden sm:inline">Recent uploads</span>
-                            <span className="sm:hidden">Uploads</span>
-                            <FaArrowRight size={9} />
-                        </div>
-                    </div>
+                        helper={<span className="text-[#64748B]">{lastUploadLabel ? `Last upload ${lastUploadLabel}` : 'No uploads yet'}</span>}
+                    />
                 </div>
+
+                <NeedsAttention stockHref="/staff/stock" videosHref="/staff/videos" daysHref="/staff/days-to-sell" />
 
                 {/* Video Tables */}
                 {loadingVideos ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
                         {[0, 1, 2].map(i => (
-                            <div key={i} className="bg-white rounded-2xl border border-gray-200 overflow-hidden animate-pulse">
-                                <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 flex justify-between">
-                                    <div className="h-3 w-32 bg-gray-200 rounded"></div>
-                                    <div className="h-3 w-12 bg-gray-100 rounded"></div>
-                                </div>
-                                <div className="p-3 grid grid-cols-2 gap-2">
-                                    {[0, 1, 2, 3].map(j => (
-                                        <div key={j} className="rounded-xl overflow-hidden border border-gray-100">
-                                            <div className="aspect-video bg-gray-200"></div>
-                                            <div className="p-2 space-y-1">
-                                                <div className="h-2.5 w-3/4 bg-gray-200 rounded"></div>
-                                                <div className="h-2 w-1/2 bg-gray-100 rounded"></div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
+                            <div key={i} className="h-48 animate-pulse rounded-xl border border-[#E2E8F0] bg-white" />
                         ))}
                     </div>
                 ) : allVideos.length > 0 && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
-
-                        {/* Recent Uploads */}
-                        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col" style={{ maxHeight: '520px' }}>
-                            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
-                                <div>
-                                    <h2 className="text-sm font-semibold text-gray-900 tracking-tight">Recent Uploads</h2>
-                                    <p className="text-xs text-gray-400 mt-0.5">Uploaded videos</p>
-                                </div>
-                                <button onClick={() => router.push('/staff/videos')} className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
-                                    View all <FaArrowRight size={9} />
-                                </button>
-                            </div>
-                            <div className="overflow-y-auto flex-1 p-3">
-                                <div className="flex flex-col gap-2">
-                                    {recentVideos.slice(0, 20).map((video) => (
-                                        <VideoCard key={video._id} video={video} />
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Sold */}
-                        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col" style={{ maxHeight: '520px' }}>
-                            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
-                                <div>
-                                    <h2 className="text-sm font-semibold text-gray-900 tracking-tight flex items-center gap-1.5">
-                                        <FaTrophy className="text-yellow-500" size={13} />
-                                        Sold
-                                    </h2>
-                                    <p className="text-xs text-gray-400 mt-0.5">Most viewed videos</p>
-                                </div>
-                                <button onClick={() => router.push('/staff/views')} className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
-                                    Views <FaArrowRight size={9} />
-                                </button>
-                            </div>
-                            <div className="overflow-y-auto flex-1 p-3">
-                                {topVideos.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center h-full py-10 text-center text-gray-400">
-                                        <FaTrophy size={22} className="mb-2 text-gray-300" />
-                                        <p className="text-sm">No data yet</p>
+                    <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-3">
+                        <Card className="flex h-full flex-col">
+                            <SectionHeader
+                                title="Recent Uploads"
+                                subtitle="Uploaded videos"
+                                action={<button type="button" onClick={() => router.push('/staff/videos')} className="text-sm text-[#0B3D73]">View all</button>}
+                            />
+                            <div className="h-72 overflow-y-auto">
+                                {recentRows.map((video) => (
+                                    <div key={video._id} className="flex items-center gap-2.5 border-b border-[#EEF1F5] px-3 py-2 last:border-0">
+                                        <button type="button" aria-label={`Preview ${videoName(video)}`} onClick={() => setSelectedVideo(video)} className="shrink-0">
+                                            <Thumb video={video} />
+                                        </button>
+                                        <button type="button" onClick={() => router.push(`/staff/videos?videoId=${video._id}`)} className="min-w-0 flex-1 text-left">
+                                            <span className="block truncate text-sm font-medium text-[#0F172A]">{videoName(video)}</span>
+                                            <span className="mt-0.5 block">{video.registration ? <RegChip value={video.registration} /> : null}</span>
+                                        </button>
+                                        <span className="shrink-0 text-sm text-[#475569]">{video.viewCount || 0}</span>
                                     </div>
-                                ) : (
-                                    <div className="flex flex-col gap-2">
-                                        {topVideos.map((video, idx) => (
-                                            <VideoCard key={video._id} video={video} showRank rank={idx + 1} />
-                                        ))}
-                                    </div>
-                                )}
+                                ))}
                             </div>
-                        </div>
+                        </Card>
 
-                        {/* Aged Uploads */}
-                        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col" style={{ maxHeight: '520px' }}>
-                            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
-                                <div>
-                                    <h2 className="text-sm font-semibold text-gray-900 tracking-tight flex items-center gap-1.5">
-                                        <FaClock className="text-orange-400" size={13} />
-                                        Aged Uploads
-                                    </h2>
-                                    <p className="text-xs text-gray-400 mt-0.5">In stock with views</p>
-                                </div>
-                                <button onClick={() => router.push('/staff/videos')} className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
-                                    View all <FaArrowRight size={9} />
-                                </button>
+                        <Card className="flex h-full flex-col">
+                            <SectionHeader
+                                title="Most viewed videos"
+                                subtitle="Sold vehicles, all time"
+                                action={<button type="button" onClick={() => router.push('/staff/views')} className="text-sm text-[#0B3D73]">Views</button>}
+                            />
+                            <div className="h-72 overflow-y-auto">
+                                {viewedRows.length === 0 ? (
+                                    <p className="px-3 py-6 text-center text-sm text-[#64748B]">No data yet</p>
+                                ) : viewedRows.map((video, idx) => (
+                                    <button key={video._id} type="button" onClick={() => router.push(`/staff/videos?videoId=${video._id}`)} className="flex w-full items-center gap-2.5 border-b border-[#EEF1F5] px-3 py-2 text-left last:border-0">
+                                        <span className="w-4 shrink-0 text-xs text-[#64748B]">{idx + 1}</span>
+                                        <Thumb video={video} />
+                                        <span className="min-w-0 flex-1">
+                                            <span className="flex items-center gap-2">
+                                                <span className="min-w-0 truncate text-sm font-medium text-[#0F172A]">{videoName(video)}</span>
+                                                {video.registration ? <RegChip value={video.registration} /> : null}
+                                            </span>
+                                            <span className="mt-1.5 block h-1 overflow-hidden rounded-full bg-[#EEF1F5]">
+                                                <span className="block h-full rounded-full bg-[#0B3D73]" style={{ width: `${Math.round(((video.viewCount || 0) / maxViews) * 100)}%` }} />
+                                            </span>
+                                        </span>
+                                        <span className="shrink-0 text-sm text-[#475569]">{video.viewCount || 0}</span>
+                                    </button>
+                                ))}
                             </div>
-                            <div className="overflow-y-auto flex-1 p-3">
-                                {agedVideos.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center h-full py-10 text-center text-gray-400">
-                                        <FaClock size={22} className="mb-2 text-gray-300" />
-                                        <p className="text-sm">No aged videos with views</p>
-                                    </div>
-                                ) : (
-                                    <div className="flex flex-col gap-2">
-                                        {agedVideos.slice(0, 20).map((video) => (
-                                            <VideoCard key={video._id} video={video} showDate />
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
+                        </Card>
 
+                        <Card className="flex h-full flex-col">
+                            <SectionHeader
+                                title="Aged stock with video"
+                                subtitle="In stock with views"
+                                action={<button type="button" onClick={() => router.push('/staff/videos')} className="text-sm text-[#0B3D73]">View all</button>}
+                            />
+                            <div className="h-72 overflow-y-auto">
+                                {agedRows.length === 0 ? (
+                                    <p className="px-3 py-6 text-center text-sm text-[#64748B]">No aged videos with views</p>
+                                ) : agedRows.map((video) => {
+                                    const age = ageTone(video.createdAt);
+                                    return (
+                                        <button key={video._id} type="button" onClick={() => router.push(`/staff/videos?videoId=${video._id}`)} className="flex w-full items-center gap-2.5 border-b border-[#EEF1F5] px-3 py-2 text-left last:border-0">
+                                            <Thumb video={video} />
+                                            <span className="min-w-0 flex-1">
+                                                <span className="block truncate text-sm font-medium text-[#0F172A]">{videoName(video)}</span>
+                                                <span className="mt-0.5 flex items-center gap-2">
+                                                    {video.registration ? <RegChip value={video.registration} /> : null}
+                                                    <span className="text-xs text-[#64748B]">{video.viewCount || 0} views</span>
+                                                </span>
+                                            </span>
+                                            <span className="shrink-0"><Badge tone={age.tone}>{age.days}d</Badge></span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </Card>
                     </div>
                 )}
 
@@ -518,8 +453,7 @@ const StaffDashboard = () => {
                     <div className="absolute inset-0 bg-black/70 backdrop-blur-md" />
 
                     <div
-                        className="relative w-full sm:max-w-2xl rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl max-h-[90vh] overflow-y-auto"
-                        style={{ background: 'linear-gradient(145deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)' }}
+                        className="relative max-h-[90vh] w-full overflow-y-auto overflow-hidden rounded-t-3xl bg-[#0F172A] sm:max-w-2xl sm:rounded-3xl"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Close button */}
@@ -633,7 +567,7 @@ const StaffDashboard = () => {
 
                             {!reserveLinkVideo?.registration && (
                                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                                    <p className="text-xs text-amber-700">⚠️ This video has no registration number. Reserve link requires a registration to be linked to the vehicle.</p>
+                                    <p className="text-xs text-amber-700">This video has no registration number. Reserve link requires a registration to be linked to the vehicle.</p>
                                 </div>
                             )}
 

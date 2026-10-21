@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import DashboardLayout from '@/components/DashboardLayout';
+import { PageTitle } from '@/components/ui/PageTitle';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useRouter } from 'next/navigation';
 import {
@@ -138,7 +139,7 @@ function SettingsContent() {
       <div className="w-full px-3 sm:px-6 pb-12">
         {/* Header Section */}
         <div className="mb-5 sm:mb-8">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Settings</h1>
+            <PageTitle title="Settings">Manage your account settings and preferences</PageTitle>
         </div>
 
         {/* Message Toast */}

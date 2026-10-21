@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import * as tus from 'tus-js-client';
 import { useAuth } from '@/context/AuthContext';
 import DashboardLayout from '@/components/DashboardLayout';
+import { PageTitle } from '@/components/ui/PageTitle';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useToast } from '@/components/ToastProvider';
 import {
@@ -524,17 +525,16 @@ function StockContent() {
   return (
     <div className="w-full px-6 pb-12">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div>
-              <h1 className="text-3xl font-bold text-gray-800">All Vehicles</h1>
-              <p className="text-gray-500 mt-1">Manage inventory and upload videos.</p>
-              <div className="flex items-center gap-2 mt-1">
-                  {lastSyncTime && <p className="text-xs text-gray-400">Last sync: {new Date(lastSyncTime).toLocaleString()}</p>}
-                  <button type="button" onClick={handleManualSync} disabled={syncing} title="Sync now" className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition">
+          <PageTitle title="All Vehicles">
+              <p>Manage inventory and upload videos.</p>
+              <div className="mt-1 flex items-center gap-2">
+                  {lastSyncTime && <span>Last sync: {new Date(lastSyncTime).toLocaleString()}</span>}
+                  <button type="button" onClick={handleManualSync} disabled={syncing} title="Sync now" className="inline-flex items-center gap-1.5 text-[#0B3D73] disabled:cursor-not-allowed disabled:opacity-50">
                       <FaSync className={syncing ? 'animate-spin' : ''} size={11} />
                       {syncing ? 'Syncing...' : 'Sync Now'}
                   </button>
               </div>
-          </div>
+          </PageTitle>
           <button type="button" onClick={() => { setSmartUploadOpen(true); resetUploadState(); setLookupRegistration(''); setFetchedVehicle(null); }} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2.5 rounded-lg font-bold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition flex items-center gap-2">
               <FaVideo /> Upload Video via Registration
           </button>
@@ -794,7 +794,7 @@ function StockContent() {
                           <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
                             <div className="bg-gradient-to-r from-blue-500 to-purple-500 h-2.5 rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
                           </div>
-                          {uploadPhase === 'cloudflare' && <p className="text-xs text-amber-600">⚠️ Large files may take a few minutes — please keep this page open</p>}
+                          {uploadPhase === 'cloudflare' && <p className="text-xs text-amber-600">⚠️ Large files may take a few minutes. Please keep this page open</p>}
                         </div>
                       )}
 
@@ -852,7 +852,7 @@ function StockContent() {
                     <FaCheck className="text-green-500" size={28} />
                   </div>
                   <h3 className="text-lg font-bold text-gray-800 mb-1">Upload Complete!</h3>
-                  <p className="text-sm text-gray-500 mb-6">{directVd!.make} {directVd!.model} — {directVd!.registration}</p>
+                  <p className="text-sm text-gray-500 mb-6">{directVd!.make} {directVd!.model}, {directVd!.registration}</p>
                   <button onClick={() => { setDirectUploadOpen(false); setSelectedStockItem(null); setSelectedFile(null); setUploadError(''); resetUploadState(); }}
                     className="px-6 py-2 bg-gray-900 text-white rounded-lg text-sm font-semibold hover:bg-gray-700 transition">Done</button>
                 </div>
@@ -921,7 +921,7 @@ function StockContent() {
                       <>
                         <FaCloudUploadAlt className="mx-auto mb-3 text-gray-300" size={48} />
                         <p className="text-base font-medium text-gray-600">Drop video here or <span className="text-blue-500">browse</span></p>
-                        <p className="text-sm text-gray-400 mt-1">MP4, MOV, AVI — up to 3GB</p>
+                        <p className="text-sm text-gray-400 mt-1">MP4, MOV, AVI, up to 3GB</p>
                       </>
                     )}
                   </div>

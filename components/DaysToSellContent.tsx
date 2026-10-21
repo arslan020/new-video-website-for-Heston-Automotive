@@ -3,6 +3,7 @@
 import { Fragment, useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/components/ToastProvider';
+import { PageTitle } from '@/components/ui/PageTitle';
 
 type Vehicle = {
   id: string;
@@ -270,12 +271,9 @@ export default function DaysToSellContent() {
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Days to Sell</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Days are counted from the financing date. Interest stays at £0 for the first 90 days, then runs at 7.9% a year on the balance.
-          </p>
-        </div>
+        <PageTitle title="Days to Sell">
+          Days are counted from the financing date. Interest stays at £0 for the first 90 days, then runs at 7.9% a year on the balance.
+        </PageTitle>
         <div className="flex gap-2">
           <button
             type="button"

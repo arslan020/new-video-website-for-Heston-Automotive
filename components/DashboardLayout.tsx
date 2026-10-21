@@ -2,10 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
 import Sidebar from './Sidebar';
-import { FaUserCircle, FaSignOutAlt, FaChevronDown, FaBars } from 'react-icons/fa';
+import { FaSignOutAlt, FaChevronDown, FaBars, FaBell, FaSearch } from 'react-icons/fa';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
@@ -20,10 +19,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (!user) return null;
 
+  const name = user.name || user.username;
+  const initials = name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('');
+
   return (
-    <div className="flex min-h-screen bg-gray-100 font-sans relative">
+    <div className="relative flex min-h-screen bg-[#F5F6F8] font-sans">
       {/* Sidebar (Fixed) */}
-      <div className={`fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <div className={`fixed inset-y-0 left-0 z-50 w-72 transform transition-transform duration-300 ease-in-out md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <Sidebar role={user.role} canViewCustomerViews={user.canViewCustomerViews !== false} />
       </div>
 
@@ -36,46 +43,54 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       )}
 
       {/* Main Content Area */}
-      <div className="flex-1 md:ml-64 flex flex-col min-h-screen transition-all duration-300 w-full">
+      <div className="flex w-full min-w-0 flex-1 flex-col overflow-x-hidden min-h-screen transition-all duration-300 md:ml-72">
         {/* Header */}
-        <header className="bg-white shadow-sm h-16 flex items-center justify-between px-4 md:px-8 sticky top-0 z-40">
-          {/* Left side */}
-          <div className="flex items-center gap-4">
+        <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-4 border-b border-[#E2E8F0] bg-white px-6">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
             <button
+              type="button"
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="md:hidden text-gray-500 hover:text-primary focus:outline-none"
+              aria-label="Open menu"
+              className="flex h-10 w-10 items-center justify-center rounded-lg text-[#475569] hover:bg-[#F5F6F8] md:hidden"
             >
-              <FaBars size={24} />
+              <FaBars size={18} />
             </button>
-            <button onClick={() => router.push(user.role === 'admin' ? '/admin' : '/staff')} className="focus:outline-none">
-              <Image
-                src="/business-logo.webp"
-                alt="Changan Heston Automotive"
-                width={384}
-                height={32}
-                className="object-contain h-8 w-auto"
+            <label className="relative hidden min-w-0 flex-1 sm:block">
+              <FaSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B]" size={14} />
+              <input
+                type="search"
+                placeholder="Search by reg, make or customer"
+                aria-label="Search by reg, make or customer"
+                className="h-10 w-full rounded-lg border border-[#E2E8F0] bg-white pl-9 pr-3 text-sm text-[#0F172A] placeholder:text-[#64748B]"
               />
-            </button>
+            </label>
           </div>
 
-          {/* Right side — User dropdown */}
-          <div
-            className="relative"
-            onMouseEnter={() => setIsDropdownOpen(true)}
-            onMouseLeave={() => setIsDropdownOpen(false)}
-          >
+          <div className="flex shrink-0 items-center gap-2">
             <button
-              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="flex items-center gap-3 hover:bg-gray-50 px-3 py-2 rounded-lg transition focus:outline-none"
+              type="button"
+              aria-label="Notifications"
+              className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#E2E8F0] text-[#475569]"
             >
-              <div className="text-right hidden sm:block">
-                <div className="text-sm font-semibold text-gray-700">{user.username}</div>
-                <div className="text-xs text-gray-500 capitalize">{user.role}</div>
-              </div>
-              <FaUserCircle size={32} className="text-gray-400" />
+              <FaBell size={15} />
+            </button>
+            <div
+              className="relative"
+              onMouseEnter={() => setIsDropdownOpen(true)}
+              onMouseLeave={() => setIsDropdownOpen(false)}
+            >
+            <button
+              type="button"
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="flex h-10 items-center gap-2 rounded-lg pl-2 pr-1.5 hover:bg-[#F5F6F8] focus:outline-none"
+            >
+              <span className="hidden text-sm font-semibold text-[#0F172A] sm:block">{name}</span>
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#EAF0F7] text-xs font-semibold text-[#0B3D73]">
+                {initials}
+              </span>
               <FaChevronDown
-                size={12}
-                className={`text-gray-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
+                size={10}
+                className={`text-[#64748B] transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
               />
             </button>
 
@@ -90,10 +105,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </button>
               </div>
             )}
+            </div>
           </div>
         </header>
 
-        <main className="flex-1 p-3 sm:p-4 md:p-8">
+        <main className="flex-1 px-6 py-6">
           {children}
         </main>
       </div>

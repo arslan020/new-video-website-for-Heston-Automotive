@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import DashboardLayout from '@/components/DashboardLayout';
+import { PageTitle } from '@/components/ui/PageTitle';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { FaHistory, FaUser, FaTrash, FaVideo, FaShippingFast } from 'react-icons/fa';
 
@@ -98,12 +99,8 @@ function ActivityLogsContent() {
   return (
     <DashboardLayout>
       <div className="w-full px-3 sm:px-6 pb-12">
-        <header className="mb-5 sm:mb-8 border-b pb-4 border-gray-200">
-          <h1 className="text-xl sm:text-3xl font-bold text-gray-800 flex items-center gap-2 sm:gap-3">
-            <FaHistory className="text-blue-600 flex-shrink-0" />
-            Activity Logs
-          </h1>
-          <p className="text-sm text-gray-500 mt-1 ml-7 sm:ml-11">Track staff actions across the portal.</p>
+        <header className="mb-5 sm:mb-8">
+          <PageTitle title="Activity Logs">Track staff actions across the portal.</PageTitle>
         </header>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">

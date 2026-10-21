@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
+import NeedsAttention from '@/components/NeedsAttention';
 import { useAuth } from '@/context/AuthContext';
 import { FaUserTie, FaCar, FaVideo, FaArrowRight } from 'react-icons/fa';
 import {
@@ -140,12 +141,17 @@ const AdminDashboard = () => {
         <DashboardLayout>
             <div className="w-full px-3 sm:px-6 space-y-5 sm:space-y-8 animate-fadeIn">
 
+                <NeedsAttention stockHref="/admin/stock" videosHref="/staff/videos" daysHref="/admin/days-to-sell" />
+
                 {/* Weekly Activity Section */}
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
                     <div className="flex justify-between items-center mb-4 sm:mb-6">
-                        <div>
-                            <h2 className="text-base sm:text-lg font-bold text-gray-800">Weekly Activity</h2>
-                            <p className="text-xs text-gray-400 mt-0.5">Last 7 days of system actions</p>
+                        <div className="flex min-w-0 items-center gap-3">
+                            <span className="h-8 w-1 shrink-0 rounded-full bg-[#0B3D73]" />
+                            <div>
+                                <h2 className="text-base font-semibold leading-5 text-[#0F172A]">Weekly Activity</h2>
+                                <p className="mt-0.5 text-xs text-[#64748B]">Last 7 days of system actions</p>
+                            </div>
                         </div>
                         <span className="text-xs font-medium text-gray-400 bg-gray-50 px-2 sm:px-3 py-1 rounded-full border border-gray-100">
                             {totalActivity} total
@@ -241,7 +247,13 @@ const AdminDashboard = () => {
 
                 {/* Go To Section */}
                 <div>
-                    <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-3 sm:mb-4">Go To</h3>
+                    <div className="mb-4 flex items-center gap-3 rounded-xl border border-[#E2E8F0] bg-white px-4 py-3">
+                        <span className="h-8 w-1 shrink-0 rounded-full bg-[#0B3D73]" />
+                        <div>
+                            <h3 className="text-base font-semibold leading-5 text-[#0F172A]">Go To</h3>
+                            <p className="mt-0.5 text-xs text-[#64748B]">Staff, stock and videos</p>
+                        </div>
+                    </div>
 
                     {loading ? (
                         <div className="flex justify-center py-10 sm:py-12">
