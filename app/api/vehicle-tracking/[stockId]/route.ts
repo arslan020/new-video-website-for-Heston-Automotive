@@ -79,6 +79,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ st
       return Response.json({ message: 'Invalid stage' }, { status: 400 });
     }
 
+    const existing = await VehicleTracking.findOne({ stockId });
+    if (!existing) {
+      if (stage !== 0) {
+        return Response.json({ message: 'A new order starts at Order Confirmed' }, { status: 400 });
+      }
+    } else if (stage !== existing.currentStage + 1 && stage !== existing.currentStage - 1) {
+      return Response.json({ message: 'A step can only move forward or back by one' }, { status: 400 });
+    }
+
     const record = await VehicleTracking.findOneAndUpdate(
       { stockId },
       {

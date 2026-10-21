@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, type ReactNode } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/components/ToastProvider';
 import { TRACKING_STAGES } from '@/lib/trackingStages';
 import { coloursForVehicle, matchStockColour } from '@/lib/exteriorColours';
 import UKPhoneInput from '@/components/UKPhoneInput';
 import { PageTitle } from '@/components/ui/PageTitle';
-import { FaCar, FaLink, FaCheck, FaSync, FaPaperPlane, FaTimes, FaPlus, FaTrash, FaCommentDots } from 'react-icons/fa';
+import { FaCar, FaLink, FaCheck, FaSync, FaPaperPlane, FaTimes, FaPlus, FaTrash, FaCommentDots, FaChevronDown } from 'react-icons/fa';
 
 interface StockVehicle {
   registration?: string | null;
@@ -72,6 +73,7 @@ interface OrderTarget {
 function OrderCard({
   order, updatingId, copiedId, sendingOrderId, confirmDeleteId, deletingOrderId,
   onSetStage, onCopy, onSend, onConfirmDelete, onCancelDelete, onDelete, onOpenRemark, onChangeColour,
+  defaultOpen = false,
 }: {
   order: TrackingRecord;
   updatingId: string | null;
@@ -87,20 +89,41 @@ function OrderCard({
   onDelete: (order: TrackingRecord) => void;
   onOpenRemark: (order: TrackingRecord, stage: number) => void;
   onChangeColour: (order: TrackingRecord, colourName: string) => void;
+  defaultOpen?: boolean;
 }) {
   const [colourOpen, setColourOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
+  useEffect(() => {
+    if (defaultOpen) setOpen(true);
+  }, [defaultOpen]);
   const colourOptions = coloursForVehicle(order.model, order.derivative);
   const selectedColour = matchStockColour(order.model, order.derivative, order.colour);
   const colourLocked = Boolean(order.vin);
+  const [pendingMove, setPendingMove] = useState<'next' | 'back' | null>(null);
+  const nextStage = order.currentStage + 1;
+  const previousStage = order.currentStage - 1;
+  const pendingStage = pendingMove === 'next' ? nextStage : pendingMove === 'back' ? previousStage : null;
   const contact = [order.customerEmail, order.customerMobile].filter(Boolean).join(' · ');
   const viewedLabel = order.lastViewedAt
     ? `Last viewed ${new Date(order.lastViewedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}, ${new Date(order.lastViewedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
     : null;
 
   return (
-    <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-3">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
+    <div className="rounded-lg bg-gray-50 p-3 sm:p-4">
+      <div className={`flex flex-col gap-3 sm:flex-row sm:items-center ${open ? 'mb-3' : ''}`}>
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => setOpen((value) => !value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              setOpen((value) => !value);
+            }
+          }}
+          className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-left"
+        >
+          <span className="flex min-w-0 flex-1 items-center gap-2">
           {selectedColour ? (
             <img
               src={selectedColour.swatch}
@@ -121,7 +144,7 @@ function OrderCard({
                 ) : (
                   <button
                     type="button"
-                    onClick={() => setColourOpen((open) => !open)}
+                    onClick={(event) => { event.stopPropagation(); setColourOpen((value) => !value); }}
                     className="flex-shrink-0 font-semibold text-[#0b457f] underline decoration-[#0b457f]/40 underline-offset-2"
                     title="Change colour"
                   >
@@ -149,7 +172,8 @@ function OrderCard({
                       type="button"
                       title={entry.name}
                       disabled={updatingId === order.stockId}
-                      onClick={() => {
+                      onClick={(event) => {
+                        event.stopPropagation();
                         setColourOpen(false);
                         if (!active) onChangeColour(order, entry.name);
                       }}
@@ -171,6 +195,9 @@ function OrderCard({
               </div>
             )}
           </div>
+          </span>
+          <span className="hidden shrink-0 text-xs font-medium text-[#0B3D73] sm:inline">{TRACKING_STAGES[order.currentStage]}</span>
+          <FaChevronDown size={11} className={`shrink-0 text-[#64748B] transition-transform ${open ? 'rotate-180' : ''}`} />
         </div>
 
         {confirmDeleteId === order.stockId ? (
@@ -224,44 +251,36 @@ function OrderCard({
         )}
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      {open && <>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
         {TRACKING_STAGES.map((label, idx) => {
           const isActive = idx === order.currentStage;
           const isPast = idx < order.currentStage;
           const remark = order.remarks?.find((r) => r.stage === idx);
           return (
-            <div key={label} className="inline-flex items-center gap-1">
-              <button
-                type="button"
-                disabled={updatingId === order.stockId}
-                onClick={() => onSetStage(order, idx)}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition disabled:opacity-50 ${
-                  isActive
-                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                    : isPast
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                    : 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100'
-                }`}
-              >
-                {isPast && <FaCheck size={9} className="inline mr-1 -mt-0.5" />}
-                {idx + 1}. {label}
-              </button>
+            <div
+              key={label}
+              className={`flex items-start gap-2 rounded-lg border px-2.5 py-2 ${
+                isActive ? 'border-[#0B3D73] bg-[#EAF0F7]' : isPast ? 'border-[#E2E8F0] bg-white' : 'border-[#EEF1F5] bg-[#F8FAFC]'
+              }`}
+            >
+              <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${
+                isActive || isPast ? 'bg-[#0B3D73] text-white' : 'bg-[#E2E8F0] text-[#64748B]'
+              }`}>
+                {isPast ? <FaCheck size={8} /> : idx + 1}
+              </span>
+              <span className={`min-w-0 flex-1 text-xs leading-4 ${isActive ? 'font-semibold text-[#0B3D73]' : 'text-[#475569]'}`}>{label}</span>
               <button
                 type="button"
                 onClick={() => onOpenRemark(order, idx)}
-                title={
+                aria-label={`Remark for ${label}`}
+                title={remark?.customerReply ? 'Customer replied' : remark ? 'Remark added' : 'Add a remark'}
+                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${
                   remark?.customerReply
-                    ? 'Customer replied, tap to view'
+                    ? 'border-emerald-500 bg-emerald-500 text-white'
                     : remark
-                    ? 'Remark added, tap to view or edit'
-                    : 'Add a remark for this step'
-                }
-                className={`w-6 h-6 flex items-center justify-center rounded-full border transition flex-shrink-0 ${
-                  remark?.customerReply
-                    ? 'bg-emerald-500 border-emerald-500 text-white'
-                    : remark
-                    ? 'bg-blue-500 border-blue-500 text-white'
-                    : 'bg-white border-gray-200 text-gray-300 hover:text-gray-500 hover:border-gray-300'
+                    ? 'border-[#0B3D73] bg-[#0B3D73] text-white'
+                    : 'border-[#E2E8F0] bg-white text-[#94A3B8]'
                 }`}
               >
                 <FaCommentDots size={10} />
@@ -270,6 +289,86 @@ function OrderCard({
           );
         })}
       </div>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        {pendingStage !== null ? (
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[#E2E8F0] bg-white px-3 py-2">
+            <span className="text-xs text-[#0F172A]">Move to {TRACKING_STAGES[pendingStage]}?</span>
+            <button
+              type="button"
+              disabled={updatingId === order.stockId}
+              onClick={() => { onSetStage(order, pendingStage); setPendingMove(null); }}
+              className="h-8 rounded-lg bg-[#0B3D73] px-3 text-xs font-medium text-white disabled:opacity-50"
+            >
+              Confirm
+            </button>
+            <button type="button" onClick={() => setPendingMove(null)} className="h-8 rounded-lg border border-[#E2E8F0] px-3 text-xs font-medium text-[#475569]">
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <>
+            {nextStage < TRACKING_STAGES.length && (
+              <button type="button" onClick={() => setPendingMove('next')} className="h-9 rounded-lg bg-[#0B3D73] px-3 text-xs font-medium text-white hover:bg-[#072A50]">
+                Move to next step
+              </button>
+            )}
+            {previousStage >= 0 && (
+              <button type="button" onClick={() => setPendingMove('back')} className="h-9 rounded-lg border border-[#E2E8F0] bg-white px-3 text-xs font-medium text-[#475569]">
+                Step back
+              </button>
+            )}
+            {nextStage >= TRACKING_STAGES.length && (
+              <span className="text-xs text-[#475569]">Handover is complete</span>
+            )}
+          </>
+        )}
+      </div>
+      </>}
+    </div>
+  );
+}
+
+function VehicleSection({
+  media, title, subtitle, badges, action, children, defaultOpen = false,
+}: {
+  media: ReactNode;
+  title: string;
+  subtitle?: string;
+  badges?: ReactNode;
+  action: ReactNode;
+  children?: ReactNode;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  useEffect(() => {
+    if (defaultOpen) setOpen(true);
+  }, [defaultOpen]);
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-5">
+      <div className={`flex flex-col gap-4 sm:flex-row sm:items-center ${open ? 'mb-4' : ''}`}>
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => setOpen((value) => !value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              setOpen((value) => !value);
+            }
+          }}
+          className="flex min-w-0 flex-1 cursor-pointer flex-col gap-4 text-left sm:flex-row sm:items-center"
+        >
+          {media}
+          <div className="min-w-0 flex-1">
+            <h3 className="text-sm font-bold text-gray-900 sm:text-base">{title}</h3>
+            {subtitle ? <p className="truncate text-xs text-gray-500 sm:text-sm">{subtitle}</p> : null}
+            {badges ? <div className="mt-1.5 flex flex-wrap items-center gap-2">{badges}</div> : null}
+          </div>
+          <FaChevronDown size={12} className={`shrink-0 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+        </div>
+        <div className="flex flex-shrink-0 items-center gap-2">{action}</div>
+      </div>
+      {open && children}
     </div>
   );
 }
@@ -305,6 +404,8 @@ const INCOMING_MODELS = [
 export default function ChanganTrackerContent() {
   const { user } = useAuth();
   const { showToast } = useToast();
+  const searchParams = useSearchParams();
+  const focusQuery = (searchParams.get('q') || '').trim().toLowerCase();
   const [stock, setStock] = useState<StockItem[]>([]);
   const [tracking, setTracking] = useState<Record<string, TrackingRecord>>({});
   const [loading, setLoading] = useState(true);
@@ -331,7 +432,10 @@ export default function ChanganTrackerContent() {
       headers: { Authorization: `Bearer ${user.token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ stage, ...extra }),
     });
-    if (!res.ok) throw new Error('Failed to update stage');
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.message || 'Failed to update stage');
+    }
     return res.json();
   }, [user]);
 
@@ -382,7 +486,7 @@ export default function ChanganTrackerContent() {
       showToast(`Stage updated to "${TRACKING_STAGES[stage]}"`, 'success');
     } catch (err) {
       console.error(err);
-      showToast('Failed to update stage', 'error');
+      showToast(err instanceof Error ? err.message : 'Failed to update stage', 'error');
     } finally {
       setUpdatingId(null);
     }
@@ -680,6 +784,30 @@ export default function ChanganTrackerContent() {
     return map;
   }, [tracking]);
 
+  const matchesFocus = (...parts: Array<string | undefined>) => {
+    if (!focusQuery) return false;
+    const text = parts.filter(Boolean).join(' ').toLowerCase();
+    const compact = text.replace(/\s/g, '');
+    return text.includes(focusQuery) || compact.includes(focusQuery.replace(/\s/g, ''));
+  };
+  const orderMatches = (order: TrackingRecord) => matchesFocus(
+    order.customerName, order.customerEmail, order.customerMobile, order.make, order.model, order.registration, order.vin
+  );
+
+  useEffect(() => {
+    if (!focusQuery) return;
+    const incomingHit = INCOMING_MODELS.some((model) => {
+      const orders = preOrdersByModel[model.name] || [];
+      return matchesFocus(model.name) || orders.some(orderMatches);
+    });
+    const showroomHit = inShowroomStock.some((item) => {
+      const orders = (item.vehicle?.vin && preOrdersByVin[item.vehicle.vin]) || [];
+      return matchesFocus(item.vehicle?.make, item.vehicle?.model, item.vehicle?.registration, item.vehicle?.vin) || orders.some(orderMatches);
+    });
+    if (showroomHit) setActiveTab('showroom');
+    else if (incomingHit) setActiveTab('incoming');
+  }, [focusQuery, preOrdersByModel, preOrdersByVin, inShowroomStock]);
+
   return (
     <div className="w-full px-3 sm:px-6 pb-12">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-5 sm:mb-8">
@@ -697,24 +825,26 @@ export default function ChanganTrackerContent() {
         </button>
       </div>
 
-      <div className="flex bg-gray-100 p-1 rounded-lg self-start mb-5 w-fit">
+      <div className="mb-5 inline-flex rounded-xl border border-[#E2E8F0] bg-white p-1">
         <button
           type="button"
           onClick={() => setActiveTab('showroom')}
-          className={`px-4 py-1.5 rounded-md text-sm font-medium transition ${
-            activeTab === 'showroom' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+          className={`h-10 rounded-lg px-4 text-sm font-medium transition ${
+            activeTab === 'showroom' ? 'bg-[#0B3D73] text-white' : 'text-[#475569] hover:bg-[#F5F6F8]'
           }`}
         >
-          In Showroom <span className="ml-1 text-xs opacity-60">({inShowroomStock.length})</span>
+          In Showroom
+          <span className={`ml-2 rounded-full px-1.5 py-0.5 text-xs ${activeTab === 'showroom' ? 'bg-white/20' : 'bg-[#F1F5F9] text-[#475569]'}`}>{inShowroomStock.length}</span>
         </button>
         <button
           type="button"
           onClick={() => setActiveTab('incoming')}
-          className={`px-4 py-1.5 rounded-md text-sm font-medium transition ${
-            activeTab === 'incoming' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+          className={`h-10 rounded-lg px-4 text-sm font-medium transition ${
+            activeTab === 'incoming' ? 'bg-[#0B3D73] text-white' : 'text-[#475569] hover:bg-[#F5F6F8]'
           }`}
         >
-          Incoming <span className="ml-1 text-xs opacity-60">({incomingCount})</span>
+          Incoming
+          <span className={`ml-2 rounded-full px-1.5 py-0.5 text-xs ${activeTab === 'incoming' ? 'bg-white/20' : 'bg-[#F1F5F9] text-[#475569]'}`}>{incomingCount}</span>
         </button>
       </div>
 
@@ -723,41 +853,44 @@ export default function ChanganTrackerContent() {
           {INCOMING_MODELS.map((model) => {
             const orders = preOrdersByModel[model.name] || [];
             return (
-              <div key={model.name} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-5">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
-                  <div className="w-full sm:w-32 h-20 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                    <img src={model.image} alt={model.name} className="w-full h-full object-cover" />
+              <VehicleSection
+                key={model.name}
+                title={model.name}
+                defaultOpen={matchesFocus(model.name) || orders.some(orderMatches)}
+                media={
+                  <div className="h-20 w-full flex-shrink-0 overflow-hidden rounded-lg bg-gray-100 sm:w-32">
+                    <img src={model.image} alt={model.name} className="h-full w-full object-cover" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-gray-900 text-sm sm:text-base">{model.name}</h3>
-                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                      <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-xs font-semibold rounded-md border border-blue-100">
-                        {model.powertrain}
+                }
+                badges={
+                  <>
+                    <span className="rounded-md border border-blue-100 bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-600">
+                      {model.powertrain}
+                    </span>
+                    {orders.length > 0 && (
+                      <span className="rounded-md border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-500">
+                        {orders.length} customer{orders.length > 1 ? 's' : ''}
                       </span>
-                      {orders.length > 0 && (
-                        <span className="px-2 py-0.5 bg-gray-50 text-gray-500 text-xs font-medium rounded-md border border-gray-200">
-                          {orders.length} customer{orders.length > 1 ? 's' : ''}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => openOrderModal({ label: model.name, make: 'Changan', model: model.name, image: model.image })}
-                      className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition"
-                    >
-                      <FaPlus size={11} /> Add Customer Order
-                    </button>
-                  </div>
-                </div>
-
+                    )}
+                  </>
+                }
+                action={
+                  <button
+                    type="button"
+                    onClick={() => openOrderModal({ label: model.name, make: 'Changan', model: model.name, image: model.image })}
+                    className="flex items-center gap-1.5 rounded-lg bg-[#0B3D73] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#072A50]"
+                  >
+                    <FaPlus size={11} /> Add Customer Order
+                  </button>
+                }
+              >
                 {orders.length > 0 && (
-                  <div className="space-y-3 pt-4 border-t border-gray-100">
+                  <div className="space-y-3 border-t border-gray-100 pt-4">
                     {orders.map((order) => (
                       <OrderCard
                         key={order.stockId}
                         order={order}
+                        defaultOpen={orderMatches(order)}
                         updatingId={updatingId}
                         copiedId={copiedId}
                         sendingOrderId={sendingOrderId}
@@ -775,7 +908,7 @@ export default function ChanganTrackerContent() {
                     ))}
                   </div>
                 )}
-              </div>
+              </VehicleSection>
             );
           })}
         </div>
@@ -802,72 +935,73 @@ export default function ChanganTrackerContent() {
             const orders = (item.vehicle?.vin && preOrdersByVin[item.vehicle.vin]) || [];
 
             return (
-              <div key={stockId} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-5">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
-                  <div className="w-full sm:w-32 h-20 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+              <VehicleSection
+                key={stockId}
+                title={`${item.vehicle?.make || ''} ${item.vehicle?.model || ''}`.trim()}
+                subtitle={item.vehicle?.derivative}
+                defaultOpen={matchesFocus(item.vehicle?.make, item.vehicle?.model, item.vehicle?.registration, item.vehicle?.vin) || orders.some(orderMatches)}
+                media={
+                  <div className="h-20 w-full flex-shrink-0 overflow-hidden rounded-lg bg-gray-100 sm:w-32">
                     {image ? (
-                      <img src={image} alt="" className="w-full h-full object-cover" />
+                      <img src={image} alt="" className="h-full w-full object-cover" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-300">
+                      <div className="flex h-full w-full items-center justify-center text-gray-300">
                         <FaCar size={24} />
                       </div>
                     )}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-gray-900 text-sm sm:text-base">
-                      {item.vehicle?.make} {item.vehicle?.model}
-                    </h3>
-                    <p className="text-xs sm:text-sm text-gray-500 truncate">{item.vehicle?.derivative}</p>
-                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                      {item.vehicle?.registration && (
-                        <span className="px-2 py-0.5 bg-blue-50 text-blue-600 font-mono text-xs rounded-md border border-blue-100">
-                          {item.vehicle.registration}
-                        </span>
-                      )}
-                      {item.vehicle?.vin && (
-                        <span className="px-2 py-0.5 bg-gray-50 text-gray-500 font-mono text-xs rounded-md border border-gray-200">
-                          VIN: {item.vehicle.vin}
-                        </span>
-                      )}
-                      {item.adverts?.forecourtPrice?.amountGBP && (
-                        <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-md border border-emerald-200">
-                          £{item.adverts.forecourtPrice.amountGBP.toLocaleString()}
-                        </span>
-                      )}
-                      {orders.length > 0 && (
-                        <span className="px-2 py-0.5 bg-gray-50 text-gray-500 text-xs font-medium rounded-md border border-gray-200">
-                          {orders.length} customer{orders.length > 1 ? 's' : ''}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => openOrderModal({
-                        label: `${item.vehicle?.make || ''} ${item.vehicle?.model || ''}`.trim(),
-                        vin: item.vehicle?.vin,
-                        registration: item.vehicle?.registration || undefined,
-                        make: item.vehicle?.make,
-                        model: item.vehicle?.model,
-                        derivative: item.vehicle?.derivative,
-                        colour: item.vehicle?.colour,
-                        image,
-                        colourLocked: true,
-                      })}
-                      className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition"
-                    >
-                      <FaPlus size={11} /> Add Customer Order
-                    </button>
-                  </div>
-                </div>
-
+                }
+                badges={
+                  <>
+                    {item.vehicle?.registration && (
+                      <span className="rounded-md border border-blue-100 bg-blue-50 px-2 py-0.5 font-mono text-xs text-blue-600">
+                        {item.vehicle.registration}
+                      </span>
+                    )}
+                    {item.vehicle?.vin && (
+                      <span className="rounded-md border border-gray-200 bg-gray-50 px-2 py-0.5 font-mono text-xs text-gray-500">
+                        VIN: {item.vehicle.vin}
+                      </span>
+                    )}
+                    {item.adverts?.forecourtPrice?.amountGBP && (
+                      <span className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                        £{item.adverts.forecourtPrice.amountGBP.toLocaleString()}
+                      </span>
+                    )}
+                    {orders.length > 0 && (
+                      <span className="rounded-md border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-500">
+                        {orders.length} customer{orders.length > 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </>
+                }
+                action={
+                  <button
+                    type="button"
+                    onClick={() => openOrderModal({
+                      label: `${item.vehicle?.make || ''} ${item.vehicle?.model || ''}`.trim(),
+                      vin: item.vehicle?.vin,
+                      registration: item.vehicle?.registration || undefined,
+                      make: item.vehicle?.make,
+                      model: item.vehicle?.model,
+                      derivative: item.vehicle?.derivative,
+                      colour: item.vehicle?.colour,
+                      image,
+                      colourLocked: true,
+                    })}
+                    className="flex items-center gap-1.5 rounded-lg bg-[#0B3D73] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#072A50]"
+                  >
+                    <FaPlus size={11} /> Add Customer Order
+                  </button>
+                }
+              >
                 {orders.length > 0 && (
-                  <div className="space-y-3 pt-4 border-t border-gray-100">
+                  <div className="space-y-3 border-t border-gray-100 pt-4">
                     {orders.map((order) => (
                       <OrderCard
                         key={order.stockId}
                         order={order}
+                        defaultOpen={orderMatches(order)}
                         updatingId={updatingId}
                         copiedId={copiedId}
                         sendingOrderId={sendingOrderId}
@@ -885,7 +1019,7 @@ export default function ChanganTrackerContent() {
                     ))}
                   </div>
                 )}
-              </div>
+              </VehicleSection>
             );
           })}
         </div>
@@ -958,7 +1092,7 @@ export default function ChanganTrackerContent() {
                   type="button"
                   onClick={handleSendTrackLink}
                   disabled={sending || (!sendForm.email && !sendForm.mobile)}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition shadow-sm disabled:opacity-50"
+                  className="flex-1 px-4 py-2 bg-[#0B3D73] text-white rounded-lg font-medium hover:bg-[#072A50] transition shadow-sm disabled:opacity-50"
                 >
                   {sending ? 'Sending...' : 'Send Link'}
                 </button>
@@ -1163,7 +1297,7 @@ export default function ChanganTrackerContent() {
                   type="button"
                   onClick={handleSaveRemark}
                   disabled={savingRemark || !remarkText.trim()}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition shadow-sm disabled:opacity-50"
+                  className="flex-1 px-4 py-2 bg-[#0B3D73] text-white rounded-lg font-medium hover:bg-[#072A50] transition shadow-sm disabled:opacity-50"
                 >
                   {savingRemark ? 'Saving...' : 'Save Remark'}
                 </button>

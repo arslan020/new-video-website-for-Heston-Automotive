@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import Sidebar from './Sidebar';
-import { FaSignOutAlt, FaChevronDown, FaBars, FaBell, FaSearch } from 'react-icons/fa';
+import { FaSignOutAlt, FaChevronDown, FaBars, FaBell } from 'react-icons/fa';
+import HeaderSearch from './HeaderSearch';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
@@ -55,15 +56,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             >
               <FaBars size={18} />
             </button>
-            <label className="relative hidden min-w-0 flex-1 sm:block">
-              <FaSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B]" size={14} />
-              <input
-                type="search"
-                placeholder="Search by reg, make or customer"
-                aria-label="Search by reg, make or customer"
-                className="h-10 w-full rounded-lg border border-[#E2E8F0] bg-white pl-9 pr-3 text-sm text-[#0F172A] placeholder:text-[#64748B]"
-              />
-            </label>
+            <HeaderSearch />
           </div>
 
           <div className="flex shrink-0 items-center gap-2">

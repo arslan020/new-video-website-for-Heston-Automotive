@@ -12,6 +12,7 @@ import {
   FaUser, FaPlay, FaTimes, FaExternalLinkAlt, FaPaperPlane, FaLink, FaPlus, FaSpinner, FaPuzzlePiece
 } from 'react-icons/fa';
 import UKPhoneInput from '@/components/UKPhoneInput';
+import RegistrationUploadModal from '@/components/RegistrationUploadModal';
 import * as tus from 'tus-js-client';
 
 interface SubPart {
@@ -103,6 +104,7 @@ function MyVideosContent() {
   const [vehicleMetadata, setVehicleMetadata] = useState<Record<string, any>>({});
 
   // UI States
+  const [uploadOpen, setUploadOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [stockFilter, setStockFilter] = useState<'instock' | 'sold'>('instock');
   const [currentPage, setCurrentPage] = useState(1);
@@ -197,6 +199,11 @@ function MyVideosContent() {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm]);
+
+  useEffect(() => {
+    const q = searchParams.get('q');
+    if (q) setSearchTerm(q);
+  }, [searchParams]);
 
   // Handle URL "Jump To Video"
   useEffect(() => {
@@ -599,12 +606,13 @@ function MyVideosContent() {
           </div>
           <h3 className="text-xl font-bold text-gray-800 mb-2">No videos uploaded yet</h3>
           <p className="text-gray-500 mb-6">Upload your first car video to get started!</p>
-          <a
-            href="/staff/upload"
+          <button
+            type="button"
+            onClick={() => setUploadOpen(true)}
             className="inline-flex items-center justify-center bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition shadow-sm"
           >
             Upload Video
-          </a>
+          </button>
         </div>
       ) : (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -1273,6 +1281,12 @@ function MyVideosContent() {
             </div>
           </div>
         </div>
+      )}
+      {uploadOpen && (
+        <RegistrationUploadModal
+          onClose={() => setUploadOpen(false)}
+          onUploaded={fetchVideos}
+        />
       )}
     </div>
   );

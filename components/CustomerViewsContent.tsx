@@ -1,6 +1,7 @@
 'use client';
 
 import { Fragment, useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { PageTitle } from '@/components/ui/PageTitle';
 import {
@@ -72,6 +73,7 @@ interface Props {
 
 export default function CustomerViewsContent({ isAdmin }: Props) {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -136,6 +138,11 @@ export default function CustomerViewsContent({ isAdmin }: Props) {
     };
     fetchStock();
   }, [fetchVideos, user?.token]);
+
+  useEffect(() => {
+    const q = searchParams.get('q');
+    if (q) setSearchQuery(q);
+  }, [searchParams]);
 
   const handleToggleSuspend = async (
     shareIdObj: string | ShareIdPopulated | undefined,

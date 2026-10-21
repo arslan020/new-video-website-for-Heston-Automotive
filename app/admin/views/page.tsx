@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { Suspense } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -10,7 +11,9 @@ export default function AdminViewsPage() {
   return (
     <ProtectedRoute role="admin">
       <DashboardLayout>
-        <CustomerViewsContent isAdmin={true} />
+        <Suspense fallback={null}>
+          <CustomerViewsContent isAdmin={true} />
+        </Suspense>
       </DashboardLayout>
     </ProtectedRoute>
   );

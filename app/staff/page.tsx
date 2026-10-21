@@ -13,6 +13,7 @@ import { RegChip } from '@/components/ui/RegChip';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { PageTitle } from '@/components/ui/PageTitle';
 import { useToast } from '@/components/ToastProvider';
+import RegistrationUploadModal from '@/components/RegistrationUploadModal';
 
 interface VideoView {
     viewerName?: string;
@@ -124,6 +125,7 @@ const StaffDashboard = () => {
 
     const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
 
+    const [uploadOpen, setUploadOpen] = useState(false);
     const [reserveLinkModalOpen, setReserveLinkModalOpen] = useState(false);
     const [reserveLinkVideo, setReserveLinkVideo] = useState<Video | null>(null);
     const [reserveLink, setReserveLink] = useState('');
@@ -325,7 +327,7 @@ const StaffDashboard = () => {
                         </button>
                         <button
                             type="button"
-                            onClick={() => router.push('/staff/upload')}
+                            onClick={() => setUploadOpen(true)}
                             className="h-10 rounded-lg bg-[#0B3D73] px-4 text-sm font-medium text-white hover:bg-[#072A50]"
                         >
                             Upload video
@@ -610,6 +612,12 @@ const StaffDashboard = () => {
                         </div>
                     </div>
                 </div>
+            )}
+            {uploadOpen && (
+                <RegistrationUploadModal
+                    onClose={() => setUploadOpen(false)}
+                    onUploaded={fetchVideos}
+                />
             )}
         </DashboardLayout>
     );

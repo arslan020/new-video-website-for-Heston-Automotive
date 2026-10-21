@@ -1,15 +1,17 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { Suspense, useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import * as tus from 'tus-js-client';
 import { useAuth } from '@/context/AuthContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import { PageTitle } from '@/components/ui/PageTitle';
+import RegistrationUploadModal from '@/components/RegistrationUploadModal';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useToast } from '@/components/ToastProvider';
 import {
   FaCar, FaVideo, FaCopy, FaCheckCircle, FaCheck, FaPlus, FaCloudUploadAlt,
-  FaTimes, FaFile, FaSearch, FaGasPump, FaCog, FaCalendar, FaPalette,
+  FaTimes, FaSearch, FaGasPump, FaCog, FaPalette,
   FaBolt, FaLeaf, FaTachometerAlt, FaUsers, FaEllipsisV, FaExternalLinkAlt, FaPaperPlane, FaTrash, FaLink, FaSync
 } from 'react-icons/fa';
 
@@ -51,7 +53,9 @@ export default function StaffStockPage() {
   return (
     <ProtectedRoute role="staff">
       <DashboardLayout>
-        <StockContent />
+        <Suspense fallback={null}>
+          <StockContent />
+        </Suspense>
       </DashboardLayout>
     </ProtectedRoute>
   );
@@ -60,6 +64,7 @@ export default function StaffStockPage() {
 function StockContent() {
   const { user } = useAuth();
   const { showToast } = useToast();
+  const searchParams = useSearchParams();
   const [stock, setStock] = useState<StockItem[]>([]);
   const [videos, setVideos] = useState<Video[]>([]);
   const [loadingStock, setLoadingStock] = useState(false);
@@ -93,13 +98,7 @@ function StockContent() {
     setSendForm({ title: 'Mr', name: '', email: '', mobile: '' });
   };
 
-  // Smart Upload Modal
   const [smartUploadOpen, setSmartUploadOpen] = useState(false);
-  const [lookupRegistration, setLookupRegistration] = useState('');
-  const [lookupLoading, setLookupLoading] = useState(false);
-  const [fetchedVehicle, setFetchedVehicle] = useState<any>(null);
-  const [smartMileage, setSmartMileage] = useState('');
-  const [smartReserveLink, setSmartReserveLink] = useState('');
 
   // Upload state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -112,12 +111,6 @@ function StockContent() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const pendingUidRef = useRef<string | null>(null);
-
-  const formatDate = (dateStr?: string) => {
-    if (!dateStr) return 'N/A';
-    try { return new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); }
-    catch { return 'N/A'; }
-  };
 
   const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); };
   const handleDragLeave = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(false); };
@@ -200,6 +193,14 @@ function StockContent() {
     fetchAllMetadata();
   }, [fetchStock, fetchVideos, fetchAllMetadata]);
 
+  useEffect(() => {
+    const q = searchParams.get('q');
+    if (q) {
+      setSearchTerm(q);
+      setCurrentPage(1);
+    }
+  }, [searchParams]);
+
   const getMatchingVideos = (item: StockItem) => {
     const vData = getVehicleData(item);
     const stockReg = (vData.registration || '').replace(/\s/g, '').toUpperCase();
@@ -263,30 +264,6 @@ function StockContent() {
       setUploadProgress(0);
       setUploading(false);
       setUploadPhase('cloudflare');
-      setLookupLoading(false);
-      setSmartMileage('');
-      setSmartReserveLink('');
-  };
-
-  const handleLookup = async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!lookupRegistration.trim()) { showToast('Please enter registration', 'error'); return; }
-      setLookupLoading(true); setFetchedVehicle(null);
-      try {
-          const res = await fetch(`/api/autotrader/lookup/${lookupRegistration.replace(/\s/g, '')}`, { headers: { Authorization: `Bearer ${user?.token}` } });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.message || data.error || 'Lookup failed');
-          if (data.vehicle) {
-              setFetchedVehicle(data.vehicle);
-              if (data.vehicle.odometerReadingMiles) setSmartMileage(data.vehicle.odometerReadingMiles.toString());
-          } else {
-              showToast('Vehicle not found', 'error');
-          }
-      } catch (err: any) {
-          showToast(err.message, 'error');
-      } finally {
-          setLookupLoading(false);
-      }
   };
 
   const processUpload = async (meta: {
@@ -362,7 +339,7 @@ function StockContent() {
           setUploadSuccess(true);
           fetchVideos();
           setTimeout(() => {
-              setSmartUploadOpen(false); setDirectUploadOpen(false); resetUploadState();
+              setDirectUploadOpen(false); resetUploadState();
           }, 2500);
 
       } catch (err: any) {
@@ -372,21 +349,6 @@ function StockContent() {
       } finally {
           setUploading(false);
       }
-  };
-
-  const handleSmartUpload = () => {
-      if (!selectedFile || !fetchedVehicle) return;
-      processUpload({
-          file: selectedFile,
-          title: `${fetchedVehicle.make} ${fetchedVehicle.model} - ${fetchedVehicle.registration}`,
-          make: fetchedVehicle.make,
-          model: fetchedVehicle.model,
-          registration: fetchedVehicle.registration,
-          vehicleDetails: fetchedVehicle,
-          mileage: smartMileage,
-          reserveCarLink: smartReserveLink,
-          originalName: selectedFile.name,
-      });
   };
 
   const handleDirectUpload = () => {
@@ -527,17 +489,26 @@ function StockContent() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <PageTitle title="All Vehicles">
               <p>Manage inventory and upload videos.</p>
-              <div className="mt-1 flex items-center gap-2">
-                  {lastSyncTime && <span>Last sync: {new Date(lastSyncTime).toLocaleString()}</span>}
-                  <button type="button" onClick={handleManualSync} disabled={syncing} title="Sync now" className="inline-flex items-center gap-1.5 text-[#0B3D73] disabled:cursor-not-allowed disabled:opacity-50">
-                      <FaSync className={syncing ? 'animate-spin' : ''} size={11} />
-                      {syncing ? 'Syncing...' : 'Sync Now'}
-                  </button>
-              </div>
+              {lastSyncTime && (
+                <p className="mt-1">
+                  Last sync: {new Date(lastSyncTime).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </p>
+              )}
           </PageTitle>
-          <button type="button" onClick={() => { setSmartUploadOpen(true); resetUploadState(); setLookupRegistration(''); setFetchedVehicle(null); }} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2.5 rounded-lg font-bold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition flex items-center gap-2">
-              <FaVideo /> Upload Video via Registration
-          </button>
+          <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleManualSync}
+                disabled={syncing}
+                className="inline-flex h-10 items-center gap-2 rounded-lg border border-[#E2E8F0] bg-white px-4 text-sm font-medium text-[#0F172A] transition hover:border-[#0B3D73] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                  <FaSync className={syncing ? 'animate-spin' : ''} size={12} />
+                  {syncing ? 'Syncing...' : 'Sync now'}
+              </button>
+              <button type="button" onClick={() => { setSmartUploadOpen(true); resetUploadState(); }} className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#0B3D73] px-4 text-sm font-medium text-white transition hover:bg-[#072A50]">
+                  <FaVideo size={13} /> Upload video
+              </button>
+          </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
@@ -690,138 +661,11 @@ function StockContent() {
           </div>
       </div>
 
-      {/* Smart Upload Modal */}
       {smartUploadOpen && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
-            {/* Header */}
-            <div className="bg-gray-900 text-white p-5 flex justify-between items-center shrink-0">
-              <h3 className="text-lg font-bold flex items-center gap-2">
-                <FaVideo className="text-blue-400" /> Find Vehicle & Upload
-              </h3>
-              <button onClick={() => { setSmartUploadOpen(false); resetUploadState(); setLookupRegistration(''); setFetchedVehicle(null); }} className="text-gray-400 hover:text-white transition"><FaTimes size={24} /></button>
-            </div>
-
-            {/* Content */}
-            <div className="overflow-y-auto p-6 flex-1">
-              {!fetchedVehicle ? (
-                <div className="max-w-md mx-auto py-8">
-                  <div className="text-center mb-6">
-                    <FaSearch className="mx-auto text-blue-600 mb-3" size={32} />
-                    <h4 className="text-xl font-bold text-gray-800">Enter Registration</h4>
-                    <p className="text-sm text-gray-500">We'll fetch the car details automatically.</p>
-                  </div>
-                  <form onSubmit={handleLookup}>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={lookupRegistration}
-                        onChange={(e) => setLookupRegistration(e.target.value.toUpperCase())}
-                        placeholder="AB12 CDE"
-                        className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg text-lg font-bold uppercase tracking-wider focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        autoFocus
-                      />
-                      <button type="submit" disabled={lookupLoading} className="bg-blue-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-blue-700 transition disabled:opacity-50">
-                        {lookupLoading ? 'Please Wait...' : 'Lookup'}
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {/* Vehicle Details Card */}
-                  <div className="bg-blue-50 rounded-xl p-5 border border-blue-100">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h2 className="text-2xl font-bold text-gray-800">{fetchedVehicle.make} {fetchedVehicle.model}</h2>
-                        <p className="text-gray-600">{fetchedVehicle.derivative}</p>
-                      </div>
-                      <span className="bg-yellow-400 text-black px-3 py-1 rounded font-bold text-lg tracking-wider border-2 border-black">{fetchedVehicle.registration}</span>
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                      <div className="flex items-center gap-2"><FaGasPump className="text-gray-400" /> {fetchedVehicle.fuelType || 'N/A'}</div>
-                      <div className="flex items-center gap-2"><FaCog className="text-gray-400" /> {fetchedVehicle.transmissionType || 'N/A'}</div>
-                      <div className="flex items-center gap-2"><FaPalette className="text-gray-400" /> {fetchedVehicle.colour || 'N/A'}</div>
-                      <div className="flex items-center gap-2"><FaCalendar className="text-gray-400" /> {formatDate(fetchedVehicle.firstRegistrationDate)}</div>
-                    </div>
-                    <button onClick={() => setFetchedVehicle(null)} className="text-xs text-blue-600 mt-4 font-medium hover:underline">← Not the right car? Search again</button>
-                  </div>
-
-                  {!uploadSuccess ? (
-                    <div className="border-t pt-2">
-                      <h4 className="font-bold text-gray-700 mb-3">Upload Video File</h4>
-
-                      <div className="grid grid-cols-2 gap-4 mb-4">
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-1">Mileage</label>
-                          <input type="number" value={smartMileage} onChange={(e) => setSmartMileage(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="e.g. 45000" onClick={(e) => e.stopPropagation()} />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-1">Reserve Car Link</label>
-                          <input type="url" value={smartReserveLink} onChange={(e) => setSmartReserveLink(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="https://..." onClick={(e) => e.stopPropagation()} />
-                        </div>
-                      </div>
-
-                      <div
-                        onDragOver={handleDragOver}
-                        onDragLeave={handleDragLeave}
-                        onDrop={handleDrop}
-                        onClick={() => fileInputRef.current?.click()}
-                        className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all mb-4 ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'}`}
-                      >
-                        <input ref={fileInputRef} type="file" accept="video/*" onChange={handleFileSelect} className="hidden" />
-                        <FaCloudUploadAlt className={`mx-auto mb-3 ${isDragging ? 'text-blue-500' : 'text-gray-400'}`} size={40} />
-                        {selectedFile ? (
-                          <div>
-                            <p className="text-green-600 font-medium mb-1">✓ {selectedFile.name}</p>
-                            <p className="text-sm text-gray-500">{(selectedFile.size / (1024 * 1024)).toFixed(2)} MB</p>
-                            <p className="text-xs text-gray-400 mt-2">Click to change file</p>
-                          </div>
-                        ) : (
-                          <div>
-                            <p className="text-gray-700 font-medium mb-1">Drop video file here or click to browse</p>
-                            <p className="text-sm text-gray-500">Supports MP4, MOV, AVI and other video formats</p>
-                          </div>
-                        )}
-                      </div>
-
-                      {uploading && (
-                        <div className="space-y-2 mb-4">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">☁️ Uploading directly to Cloudflare...</span>
-                            <span className="text-blue-600 font-medium">{uploadProgress}%</span>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                            <div className="bg-gradient-to-r from-blue-500 to-purple-500 h-2.5 rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
-                          </div>
-                          {uploadPhase === 'cloudflare' && <p className="text-xs text-amber-600">⚠️ Large files may take a few minutes. Please keep this page open</p>}
-                        </div>
-                      )}
-
-                      {uploadError && <div className="mt-3 text-red-600 text-sm font-medium text-center">{uploadError}</div>}
-
-                      <div className="mt-6 flex justify-end gap-3">
-                        <button onClick={() => { setSmartUploadOpen(false); resetUploadState(); setLookupRegistration(''); setFetchedVehicle(null); }} className="px-5 py-2.5 text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
-                        <button onClick={handleSmartUpload} disabled={!selectedFile || uploading} className="bg-green-600 text-white px-6 py-2.5 rounded-lg font-bold hover:bg-green-700 transition disabled:opacity-50 flex items-center gap-2">
-                          {uploading ? 'Uploading...' : <><FaCloudUploadAlt /> Start Upload</>}
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <FaCheck className="text-green-600" size={32} />
-                      </div>
-                      <h3 className="text-xl font-bold text-gray-800">Success!</h3>
-                      <p className="text-gray-500 mb-6">Video uploaded and linked to {fetchedVehicle.registration}</p>
-                      <button onClick={() => { setSmartUploadOpen(false); resetUploadState(); setLookupRegistration(''); setFetchedVehicle(null); }} className="text-blue-600 font-bold hover:underline">Close</button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <RegistrationUploadModal
+          onClose={() => setSmartUploadOpen(false)}
+          onUploaded={fetchVideos}
+        />
       )}
 
       {/* Direct Upload Modal */}

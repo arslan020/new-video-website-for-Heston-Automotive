@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import CustomerViewsContent from '@/components/CustomerViewsContent';
@@ -10,7 +11,9 @@ export default function StaffViewsPage() {
   return (
     <ProtectedRoute role="staff">
       <DashboardLayout>
-        <StaffViewsGate />
+        <Suspense fallback={null}>
+          <StaffViewsGate />
+        </Suspense>
       </DashboardLayout>
     </ProtectedRoute>
   );

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { Suspense, useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import { PageTitle } from '@/components/ui/PageTitle';
@@ -57,7 +58,9 @@ export default function AdminStockPage() {
   return (
     <ProtectedRoute role="admin">
       <DashboardLayout>
-        <AdminStockContent />
+        <Suspense fallback={null}>
+          <AdminStockContent />
+        </Suspense>
       </DashboardLayout>
     </ProtectedRoute>
   );
@@ -66,6 +69,7 @@ export default function AdminStockPage() {
 function AdminStockContent() {
   const { user } = useAuth();
   const { showToast } = useToast();
+  const searchParams = useSearchParams();
   const [stock, setStock] = useState<StockItem[]>([]);
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
@@ -155,6 +159,14 @@ function AdminStockContent() {
     fetchVideos();
     fetchAllVehicleMetadata();
   }, [fetchStock, fetchVideos, fetchAllVehicleMetadata]);
+
+  useEffect(() => {
+    const q = searchParams.get('q');
+    if (q) {
+      setSearchTerm(q);
+      setCurrentPage(1);
+    }
+  }, [searchParams]);
 
   const getVehicleData = (item: StockItem) => {
     const mileage =
