@@ -19,6 +19,7 @@ type StockRow = {
   make?: string;
   model?: string;
   derivative?: string;
+  vin?: string;
 };
 
 type VideoRow = {

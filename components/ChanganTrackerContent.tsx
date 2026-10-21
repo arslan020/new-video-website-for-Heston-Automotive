@@ -38,6 +38,7 @@ interface TrackingRecord {
   stockId: string;
   currentStage: number;
   vin?: string;
+  registration?: string;
   make?: string;
   model?: string;
   image?: string;
@@ -784,7 +785,7 @@ export default function ChanganTrackerContent() {
     return map;
   }, [tracking]);
 
-  const matchesFocus = (...parts: Array<string | undefined>) => {
+  const matchesFocus = (...parts: Array<string | null | undefined>) => {
     if (!focusQuery) return false;
     const text = parts.filter(Boolean).join(' ').toLowerCase();
     const compact = text.replace(/\s/g, '');
