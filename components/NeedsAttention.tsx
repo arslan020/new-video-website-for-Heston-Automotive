@@ -8,7 +8,7 @@ import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 
 type SaleVehicle = { vehicleType: string; soldAt: string | null; daysTo90: number };
-type VideoRow = { registration?: string; createdAt: string; deletedAt?: string };
+type VideoRow = { registration?: string; createdAt: string; deletedAt?: string; videoUrl?: string; cloudflareVideoId?: string; youtubeVideoId?: string };
 type StockRow = { vehicle?: { registration?: string } };
 
 const boxClass = 'flex items-center justify-between gap-3 rounded-lg border border-[#F3D6D6] bg-[#FDF2F2] px-4 py-3 text-left transition duration-200 ease-out hover:-translate-y-0.5 hover:border-[#E7B4B4] hover:bg-[#FBEAEA] hover:shadow-sm';
@@ -42,7 +42,7 @@ export default function NeedsAttention({
       const videoData = await videoRes.json();
       const saleData = await saleRes.json();
       const stock: StockRow[] = stockData.results || [];
-      const videos: VideoRow[] = (Array.isArray(videoData) ? videoData : videoData.videos || []).filter((video: VideoRow) => !video.deletedAt);
+      const videos: VideoRow[] = (Array.isArray(videoData) ? videoData : videoData.videos || []).filter((video: VideoRow) => !video.deletedAt && Boolean(video.videoUrl || video.cloudflareVideoId || video.youtubeVideoId));
       const sales: SaleVehicle[] = Array.isArray(saleData.vehicles) ? saleData.vehicles : [];
 
       const stockRegs = new Set(stock.map((item) => (item.vehicle?.registration || '').replace(/\s/g, '').toUpperCase()).filter(Boolean));

@@ -46,6 +46,10 @@ function videoName(video: Video) {
     return displayName;
 }
 
+function hasPlayableVideo(video: Video) {
+    return !video.deletedAt && Boolean(video.videoUrl || video.cloudflareVideoId || video.youtubeVideoId);
+}
+
 function videoThumb(video: Video) {
     const isDeleted = !!video.deletedAt || (!video.videoUrl && !video.cloudflareVideoId && !video.youtubeVideoId);
     if (isDeleted) return null;
@@ -241,12 +245,14 @@ const StaffDashboard = () => {
 
     const topVideos = [...allVideos]
         .filter(v => {
+            if (!hasPlayableVideo(v)) return false;
             const reg = (v.registration || '').replace(/\s/g, '').toUpperCase();
             return reg && stockRegs.size > 0 && !stockRegs.has(reg);
         })
         .sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0));
 
     const recentVideos = allVideos.filter(v => {
+        if (!hasPlayableVideo(v)) return false;
         const normReg = (v.registration || '').replace(/\s/g, '').toUpperCase();
         const isSold = normReg && stockRegs.size > 0 && !stockRegs.has(normReg);
         return !isSold;
@@ -254,6 +260,7 @@ const StaffDashboard = () => {
 
     const agedVideos = [...allVideos]
         .filter(v => {
+            if (!hasPlayableVideo(v)) return false;
             const normReg = (v.registration || '').replace(/\s/g, '').toUpperCase();
             const isSold = normReg && stockRegs.size > 0 && !stockRegs.has(normReg);
             return !isSold && (v.viewCount || 0) > 0;
@@ -274,7 +281,7 @@ const StaffDashboard = () => {
         })
         .reduce((sum, v) => sum + (v.viewCount || 0), 0);
 
-    const activeVideos = allVideos.filter(v => !v.deletedAt);
+    const activeVideos = allVideos.filter(hasPlayableVideo);
     const isSoldVideo = (video: Video) => {
         const reg = (video.registration || '').replace(/\s/g, '').toUpperCase();
         return Boolean(reg && stockRegs.size > 0 && !stockRegs.has(reg));
