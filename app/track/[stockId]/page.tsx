@@ -4,18 +4,18 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import {
   FaCar,
-  FaCheck,
   FaClipboardCheck,
   FaFileInvoiceDollar,
   FaHandshake,
   FaKey,
+  FaPhone,
   FaShieldAlt,
   FaShippingFast,
   FaWarehouse,
   FaWrench,
 } from 'react-icons/fa';
 import type { IconType } from 'react-icons';
-import { TRACKING_STAGE_DESCRIPTIONS } from '@/lib/trackingStages';
+import { FINANCE_STEP_COMPLETE_DESCRIPTION, GOOGLE_REVIEW_URL, TRACKING_STAGE_CUSTOMER_LABELS, TRACKING_STAGE_DESCRIPTIONS } from '@/lib/trackingStages';
 import { findExteriorColour } from '@/lib/exteriorColours';
 import CarStepReveal from '@/components/CarStepReveal';
 
@@ -30,14 +30,6 @@ const STAGE_ICONS: IconType[] = [
   FaHandshake,
 ];
 
-interface StageRemark {
-  stage: number;
-  text: string;
-  createdAt: string;
-  customerReply?: string;
-  repliedAt?: string;
-}
-
 interface TrackingData {
   stockId: string;
   registration?: string;
@@ -50,7 +42,7 @@ interface TrackingData {
   updatedAt: string;
   stages: string[];
   customerName?: string;
-  remarks?: StageRemark[];
+  reviewEnabled?: boolean;
 }
 
 export default function VehicleTrackingPage() {
@@ -60,8 +52,6 @@ export default function VehicleTrackingPage() {
   const [data, setData] = useState<TrackingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const [replyDrafts, setReplyDrafts] = useState<Record<number, string>>({});
-  const [sendingReplyStage, setSendingReplyStage] = useState<number | null>(null);
   const [shownProgress, setShownProgress] = useState(0);
   const shownRef = useRef(0);
   const barFrame = useRef(0);
@@ -120,32 +110,6 @@ export default function VehicleTrackingPage() {
     return () => cancelAnimationFrame(barFrame.current);
   }, [data]);
 
-  const handleSendReply = async (stage: number) => {
-    const reply = (replyDrafts[stage] || '').trim();
-    if (!reply) return;
-    setSendingReplyStage(stage);
-    try {
-      const res = await fetch(`/api/vehicle-tracking/${stockId}/reply`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stage, reply }),
-      });
-      if (!res.ok) throw new Error('Failed to send reply');
-      setData((prev) => {
-        if (!prev) return prev;
-        const remarks = (prev.remarks || []).map((r) =>
-          r.stage === stage ? { ...r, customerReply: reply, repliedAt: new Date().toISOString() } : r
-        );
-        return { ...prev, remarks };
-      });
-      setReplyDrafts((prev) => ({ ...prev, [stage]: '' }));
-    } catch {
-      alert('Failed to send your reply. Please try again.');
-    } finally {
-      setSendingReplyStage(null);
-    }
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f4f7fb]">
@@ -175,8 +139,6 @@ export default function VehicleTrackingPage() {
   const vehicleName = [data.make, data.model].filter(Boolean).join(' ') || 'vehicle';
   const customerName = data.customerName?.trim();
   const exterior = findExteriorColour(data.model, data.derivative, data.colour);
-  const readyIndex = data.stages.length - 2;
-  const handoverIndex = data.stages.length - 1;
 
   return (
     <div className="min-h-screen bg-[#eef3f6] flex flex-col">
@@ -260,7 +222,6 @@ export default function VehicleTrackingPage() {
                 const isDone = idx < data.currentStage;
                 const isCurrent = idx === data.currentStage;
                 const isLast = idx === data.stages.length - 1;
-                const remark = data.remarks?.find((r) => r.stage === idx);
                 const Icon = STAGE_ICONS[idx] || FaCar;
                 return (
                   <li
@@ -284,7 +245,7 @@ export default function VehicleTrackingPage() {
                           : 'bg-[#f4f7fb] text-[#a0a0a0]'
                       }`}
                     >
-                      {isDone ? <FaCheck size={13} /> : <Icon size={15} />}
+                      <Icon size={15} />
                     </span>
                     <div className="min-w-0 pt-2">
                       <p
@@ -292,43 +253,52 @@ export default function VehicleTrackingPage() {
                           isCurrent ? 'text-[#0b457f]' : isDone ? 'text-[#282828]' : 'text-[#a0a0a0]'
                         }`}
                       >
-                        {label}
+                        {TRACKING_STAGE_CUSTOMER_LABELS[idx] || label}
                       </p>
                       {isCurrent && (
-                        <p className="mt-1 text-sm text-[#505050] leading-relaxed">
-                          {TRACKING_STAGE_DESCRIPTIONS[idx]}
-                        </p>
-                      )}
-
-                      {remark && (
-                        <div className="mt-2.5 max-w-md border-l-2 border-[#0b457f] pl-3">
-                          <p className="text-sm text-[#282828]">{remark.text}</p>
-
-                          {remark.customerReply ? (
-                            <p className="mt-1.5 text-sm text-[#505050]">
-                              <span className="font-medium text-[#282828]">You: </span>
-                              {remark.customerReply}
-                            </p>
-                          ) : (
-                            <div className="mt-2 flex gap-2">
-                              <input
-                                type="text"
-                                value={replyDrafts[idx] || ''}
-                                onChange={(e) => setReplyDrafts((prev) => ({ ...prev, [idx]: e.target.value }))}
-                                placeholder="Write a reply"
-                                className="flex-1 min-w-0 bg-transparent border-b border-[#d2d2d2] px-0 py-1.5 text-sm focus:outline-none focus:border-[#0b457f]"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => handleSendReply(idx)}
-                                disabled={sendingReplyStage === idx || !(replyDrafts[idx] || '').trim()}
-                                className="text-xs font-semibold uppercase tracking-wide text-[#0b457f] disabled:opacity-40"
+                        <div className="mt-1">
+                          <p className="text-sm text-[#505050] leading-relaxed">
+                            {TRACKING_STAGE_DESCRIPTIONS[idx]}
+                          </p>
+                          {idx === TRACKING_STAGE_CUSTOMER_LABELS.length - 1 && data.reviewEnabled ? (
+                            <>
+                              <p className="mt-2 text-sm text-[#505050] leading-relaxed">
+                                Thank you again for your business, and enjoy your new car! If you loved your experience, we would highly appreciate it if you could leave us a quick review to help others find us.
+                              </p>
+                              <a
+                                href={GOOGLE_REVIEW_URL}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="mt-3 inline-flex items-center gap-2 rounded-lg border border-[#d2d2d2] bg-white px-4 py-2 text-sm font-semibold text-[#282828]"
                               >
-                                {sendingReplyStage === idx ? '...' : 'Reply'}
-                              </button>
-                            </div>
-                          )}
+                                <svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true">
+                                  <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 8 3.1l5.7-5.7C34.2 6.1 29.4 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.3-.4-3.5z" />
+                                  <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19 12 24 12c3.1 0 5.8 1.2 8 3.1l5.7-5.7C34.2 6.1 29.4 4 24 4 16.3 4 9.6 8.3 6.3 14.7z" />
+                                  <path fill="#4CAF50" d="M24 44c5.2 0 10-2 13.6-5.2l-6.3-5.3C29.2 35.1 26.7 36 24 36c-5.3 0-9.7-3.4-11.3-8.1l-6.5 5C9.5 39.6 16.2 44 24 44z" />
+                                  <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-1.1 3.2-3.5 5.7-6.6 7.1l6.3 5.3C37.4 38.3 44 33 44 24c0-1.2-.1-2.3-.4-3.5z" />
+                                </svg>
+                                Leave a review
+                              </a>
+                            </>
+                          ) : idx === TRACKING_STAGE_CUSTOMER_LABELS.length - 1 ? (
+                            <p className="mt-2 text-sm text-[#505050] leading-relaxed">
+                              Thank you again for your business, and enjoy your new car!
+                            </p>
+                          ) : idx === 5 ? (
+                            <a
+                              href="tel:+442051788030"
+                              className="mt-3 inline-flex items-center gap-2 rounded-lg border border-[#d2d2d2] bg-white px-4 py-2 text-sm font-semibold text-[#282828]"
+                            >
+                              <FaPhone size={13} />
+                              Contact us
+                            </a>
+                          ) : null}
                         </div>
+                      )}
+                      {isDone && idx === 3 && (
+                        <p className="mt-1 text-sm text-[#505050] leading-relaxed">
+                          {FINANCE_STEP_COMPLETE_DESCRIPTION}
+                        </p>
                       )}
                     </div>
                   </li>
@@ -336,20 +306,6 @@ export default function VehicleTrackingPage() {
               })}
             </ol>
           </div>
-
-          {data.currentStage === readyIndex && (
-            <p className="mt-5 text-sm text-[#505050] text-center">
-              <span className="font-semibold text-[#0b457f]">Ready for collection.</span>{' '}
-              Your {vehicleName} is ready. We&apos;ll be in touch to arrange a time at Changan Heathrow.
-            </p>
-          )}
-
-          {data.currentStage === handoverIndex && (
-            <p className="mt-5 text-sm text-[#505050] text-center">
-              <span className="font-semibold text-[#0b457f]">Handover complete.</span>{' '}
-              Congratulations on your new {vehicleName}. Thank you for choosing Changan Heathrow.
-            </p>
-          )}
 
           <p className="text-center text-xs text-[#a0a0a0] mt-6">
             Last updated {new Date(data.updatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}

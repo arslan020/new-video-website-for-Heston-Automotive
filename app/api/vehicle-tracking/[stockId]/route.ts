@@ -36,6 +36,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ stoc
       stages: TRACKING_STAGES,
       isPreOrder: record.isPreOrder || false,
       customerName: record.customerName,
+      reviewEnabled: Boolean(record.reviewEnabled),
       remarks: record.remarks.map((r) => ({
         stage: r.stage,
         text: r.text,
@@ -69,6 +70,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ st
       const record = await VehicleTracking.findOneAndUpdate(
         { stockId },
         { $set: { colour, ...(image !== undefined && { image }) } },
+        { new: true }
+      );
+      if (!record) return Response.json({ message: 'Tracking record not found' }, { status: 404 });
+      return Response.json(record);
+    }
+
+    if (body.reviewOnly) {
+      const record = await VehicleTracking.findOneAndUpdate(
+        { stockId },
+        { $set: { reviewEnabled: Boolean(body.reviewEnabled) } },
         { new: true }
       );
       if (!record) return Response.json({ message: 'Tracking record not found' }, { status: 404 });

@@ -8,7 +8,7 @@ import { TRACKING_STAGES } from '@/lib/trackingStages';
 import { coloursForVehicle, matchStockColour } from '@/lib/exteriorColours';
 import UKPhoneInput from '@/components/UKPhoneInput';
 import { PageTitle } from '@/components/ui/PageTitle';
-import { FaCar, FaLink, FaCheck, FaSync, FaPaperPlane, FaTimes, FaPlus, FaTrash, FaCommentDots, FaChevronDown } from 'react-icons/fa';
+import { FaCar, FaLink, FaCheck, FaSync, FaPaperPlane, FaTimes, FaPlus, FaTrash, FaChevronDown } from 'react-icons/fa';
 
 interface StockVehicle {
   registration?: string | null;
@@ -26,14 +26,6 @@ interface StockItem {
   media?: { images?: { url?: string; href?: string }[] };
 }
 
-interface StageRemark {
-  stage: number;
-  text: string;
-  createdAt: string;
-  customerReply?: string;
-  repliedAt?: string;
-}
-
 interface TrackingRecord {
   stockId: string;
   currentStage: number;
@@ -48,8 +40,8 @@ interface TrackingRecord {
   customerName?: string;
   customerEmail?: string;
   customerMobile?: string;
+  reviewEnabled?: boolean;
   lastViewedAt?: string;
-  remarks?: StageRemark[];
 }
 
 interface SendTarget {
@@ -73,7 +65,7 @@ interface OrderTarget {
 
 function OrderCard({
   order, updatingId, copiedId, sendingOrderId, confirmDeleteId, deletingOrderId,
-  onSetStage, onCopy, onSend, onConfirmDelete, onCancelDelete, onDelete, onOpenRemark, onChangeColour,
+  onSetStage, onCopy, onSend, onConfirmDelete, onCancelDelete, onDelete, onChangeColour, onToggleReview,
   defaultOpen = false,
 }: {
   order: TrackingRecord;
@@ -88,8 +80,8 @@ function OrderCard({
   onConfirmDelete: (stockId: string) => void;
   onCancelDelete: () => void;
   onDelete: (order: TrackingRecord) => void;
-  onOpenRemark: (order: TrackingRecord, stage: number) => void;
   onChangeColour: (order: TrackingRecord, colourName: string) => void;
+  onToggleReview: (order: TrackingRecord) => void;
   defaultOpen?: boolean;
 }) {
   const [colourOpen, setColourOpen] = useState(false);
@@ -257,35 +249,35 @@ function OrderCard({
         {TRACKING_STAGES.map((label, idx) => {
           const isActive = idx === order.currentStage;
           const isPast = idx < order.currentStage;
-          const remark = order.remarks?.find((r) => r.stage === idx);
           return (
             <div
               key={label}
-              className={`flex items-start gap-2 rounded-lg border px-2.5 py-2 ${
+              className={`flex flex-col gap-2 rounded-lg border px-2.5 py-2 ${
                 isActive ? 'border-[#0B3D73] bg-[#EAF0F7]' : isPast ? 'border-[#E2E8F0] bg-white' : 'border-[#EEF1F5] bg-[#F8FAFC]'
               }`}
             >
+              <div className="flex items-start gap-2">
               <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${
                 isActive || isPast ? 'bg-[#0B3D73] text-white' : 'bg-[#E2E8F0] text-[#64748B]'
               }`}>
                 {isPast ? <FaCheck size={8} /> : idx + 1}
               </span>
               <span className={`min-w-0 flex-1 text-xs leading-4 ${isActive ? 'font-semibold text-[#0B3D73]' : 'text-[#475569]'}`}>{label}</span>
-              <button
-                type="button"
-                onClick={() => onOpenRemark(order, idx)}
-                aria-label={`Remark for ${label}`}
-                title={remark?.customerReply ? 'Customer replied' : remark ? 'Remark added' : 'Add a remark'}
-                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${
-                  remark?.customerReply
-                    ? 'border-emerald-500 bg-emerald-500 text-white'
-                    : remark
-                    ? 'border-[#0B3D73] bg-[#0B3D73] text-white'
-                    : 'border-[#E2E8F0] bg-white text-[#94A3B8]'
-                }`}
-              >
-                <FaCommentDots size={10} />
-              </button>
+              </div>
+              {isActive && idx === TRACKING_STAGES.length - 1 && (
+                <button
+                  type="button"
+                  onClick={() => onToggleReview(order)}
+                  disabled={updatingId === order.stockId}
+                  className={`h-8 rounded-lg px-2 text-xs font-semibold disabled:opacity-50 ${
+                    order.reviewEnabled
+                      ? 'bg-[#0B3D73] text-white'
+                      : 'border border-[#0B3D73] bg-white text-[#0B3D73]'
+                  }`}
+                >
+                  {order.reviewEnabled ? 'Review on' : 'Enable review'}
+                </button>
+              )}
             </div>
           );
         })}
@@ -422,9 +414,6 @@ export default function ChanganTrackerContent() {
   const [sendingOrderId, setSendingOrderId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deletingOrderId, setDeletingOrderId] = useState<string | null>(null);
-  const [remarkTarget, setRemarkTarget] = useState<{ stockId: string; stage: number } | null>(null);
-  const [remarkText, setRemarkText] = useState('');
-  const [savingRemark, setSavingRemark] = useState(false);
 
   const patchStage = useCallback(async (stockId: string, stage: number, extra: Record<string, unknown> = {}): Promise<TrackingRecord> => {
     if (!user?.token) throw new Error('Missing auth token');
@@ -515,6 +504,28 @@ export default function ChanganTrackerContent() {
     } catch (err) {
       console.error(err);
       showToast('Failed to update colour', 'error');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const handleToggleReview = async (order: TrackingRecord) => {
+    if (!user?.token) return;
+    const next = !order.reviewEnabled;
+    setUpdatingId(order.stockId);
+    try {
+      const res = await fetch(`/api/vehicle-tracking/${order.stockId}`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${user.token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reviewOnly: true, reviewEnabled: next }),
+      });
+      const updated: TrackingRecord = await res.json();
+      if (!res.ok) throw new Error('Failed to update review');
+      setTracking((prev) => ({ ...prev, [updated.stockId]: updated }));
+      showToast(next ? 'Review link is on for this customer' : 'Review link is off', 'success');
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to update review', 'error');
     } finally {
       setUpdatingId(null);
     }
@@ -637,46 +648,6 @@ export default function ChanganTrackerContent() {
     } finally {
       setDeletingOrderId(null);
       setConfirmDeleteId(null);
-    }
-  };
-
-  const openRemarkModal = (order: TrackingRecord, stage: number) => {
-    const existing = order.remarks?.find((r) => r.stage === stage);
-    setRemarkTarget({ stockId: order.stockId, stage });
-    setRemarkText(existing?.text || '');
-    // Refresh in the background so a customer reply made since the last load shows up
-    // immediately, instead of needing a manual "Refresh" click.
-    fetchData(false);
-  };
-
-  const closeRemarkModal = () => {
-    setRemarkTarget(null);
-    setRemarkText('');
-  };
-
-  const handleSaveRemark = async () => {
-    if (!remarkTarget || !user?.token) return;
-    if (!remarkText.trim()) {
-      showToast('Please enter a remark', 'error');
-      return;
-    }
-    setSavingRemark(true);
-    try {
-      const res = await fetch(`/api/vehicle-tracking/${remarkTarget.stockId}/remark`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${user.token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stage: remarkTarget.stage, text: remarkText }),
-      });
-      if (!res.ok) throw new Error('Failed to save remark');
-      const updated: TrackingRecord = await res.json();
-      setTracking((prev) => ({ ...prev, [updated.stockId]: updated }));
-      showToast('Remark saved', 'success');
-      closeRemarkModal();
-    } catch (err) {
-      console.error(err);
-      showToast('Failed to save remark', 'error');
-    } finally {
-      setSavingRemark(false);
     }
   };
 
@@ -903,8 +874,8 @@ export default function ChanganTrackerContent() {
                         onConfirmDelete={setConfirmDeleteId}
                         onCancelDelete={() => setConfirmDeleteId(null)}
                         onDelete={handleDeleteOrder}
-                        onOpenRemark={openRemarkModal}
                         onChangeColour={handleChangeColour}
+                        onToggleReview={handleToggleReview}
                       />
                     ))}
                   </div>
@@ -1014,8 +985,8 @@ export default function ChanganTrackerContent() {
                         onConfirmDelete={setConfirmDeleteId}
                         onCancelDelete={() => setConfirmDeleteId(null)}
                         onDelete={handleDeleteOrder}
-                        onOpenRemark={openRemarkModal}
                         onChangeColour={handleChangeColour}
+                        onToggleReview={handleToggleReview}
                       />
                     ))}
                   </div>
@@ -1233,76 +1204,6 @@ export default function ChanganTrackerContent() {
               >
                 {creatingOrder ? 'Creating...' : 'Create order'}
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {remarkTarget && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 sm:p-4 p-0">
-          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md overflow-hidden animate-fade-in max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-              <div>
-                <h3 className="text-xl font-bold text-gray-800">Remark</h3>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  {tracking[remarkTarget.stockId]?.customerName || 'Customer'} · {TRACKING_STAGES[remarkTarget.stage]}
-                </p>
-              </div>
-              <button type="button" onClick={closeRemarkModal} className="text-gray-400 hover:text-gray-600 transition">
-                <FaTimes size={18} />
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Note for the customer at this step
-                </label>
-                <textarea
-                  value={remarkText}
-                  onChange={(e) => setRemarkText(e.target.value)}
-                  rows={3}
-                  placeholder="e.g. Waiting on your signed finance documents"
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                />
-                <p className="text-xs text-gray-400 mt-1">
-                  Only shows on the customer&apos;s link once saved, and only at this step.
-                </p>
-              </div>
-
-              {(() => {
-                const existing = tracking[remarkTarget.stockId]?.remarks?.find((r) => r.stage === remarkTarget.stage);
-                if (!existing?.customerReply) return null;
-                return (
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
-                    <p className="text-xs font-semibold text-emerald-700 mb-1">Customer replied</p>
-                    <p className="text-sm text-emerald-800">{existing.customerReply}</p>
-                    {existing.repliedAt && (
-                      <p className="text-xs text-emerald-600 mt-1">
-                        {new Date(existing.repliedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })},{' '}
-                        {new Date(existing.repliedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-                      </p>
-                    )}
-                  </div>
-                );
-              })()}
-
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={closeRemarkModal}
-                  className="flex-1 px-4 py-2 border border-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSaveRemark}
-                  disabled={savingRemark || !remarkText.trim()}
-                  className="flex-1 px-4 py-2 bg-[#0B3D73] text-white rounded-lg font-medium hover:bg-[#072A50] transition shadow-sm disabled:opacity-50"
-                >
-                  {savingRemark ? 'Saving...' : 'Save Remark'}
-                </button>
-              </div>
             </div>
           </div>
         </div>

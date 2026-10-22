@@ -34,6 +34,7 @@ export interface IVehicleTracking extends Omit<Document, 'model'> {
   customerName?: string;
   customerEmail?: string;
   customerMobile?: string;
+  reviewEnabled?: boolean;
   lastViewedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -77,6 +78,7 @@ const vehicleTrackingSchema = new mongoose.Schema<IVehicleTracking>(
     customerName: String,
     customerEmail: String,
     customerMobile: String,
+    reviewEnabled: { type: Boolean, default: false },
     lastViewedAt: Date,
   },
   { timestamps: true }
