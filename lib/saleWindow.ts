@@ -68,6 +68,7 @@ export type SaleWindowView = {
   interestToDate: number;
   closingBalance: number;
   soldAt: string | null;
+  soldPrice: number | null;
 };
 
 export function toView(record: ISaleWindow, today = utcToday()): SaleWindowView {
@@ -97,6 +98,7 @@ export function toView(record: ISaleWindow, today = utcToday()): SaleWindowView 
     interestToDate,
     closingBalance: record.outstandingAmount + interestToDate,
     soldAt: record.soldAt ? new Date(record.soldAt).toISOString() : null,
+    soldPrice: typeof record.soldPrice === 'number' ? record.soldPrice : null,
   };
 }
 
@@ -230,6 +232,7 @@ export async function sendSaleWindowReminder(recipients = SALE_WINDOW_EMAILS) {
         <td style="${cell}">${dayLabel(row.daysTo360)}<br><span style="color:#6b7280;font-size:12px;">${formatUkDate(new Date(row.day360))}</span></td>
         <td style="${cell}">${formatMoney(row.outstandingAmount)}</td>
         <td style="${cell}">${formatMoney(row.interestToDate)}</td>
+        <td style="${cell}">${row.soldPrice == null ? '-' : formatMoney(row.soldPrice)}</td>
         <td style="${cell}">${formatMoney(row.closingBalance)}</td>
       </tr>`;
     })
@@ -254,6 +257,7 @@ export async function sendSaleWindowReminder(recipients = SALE_WINDOW_EMAILS) {
               <th style="padding:8px 10px;">360 days</th>
               <th style="padding:8px 10px;">Balance</th>
               <th style="padding:8px 10px;">Interest</th>
+              <th style="padding:8px 10px;">Sold at (£)</th>
               <th style="padding:8px 10px;">Closing</th>
             </tr>
           </thead>

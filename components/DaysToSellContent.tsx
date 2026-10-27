@@ -22,6 +22,7 @@ type Vehicle = {
   interestToDate: number;
   closingBalance: number;
   soldAt: string | null;
+  soldPrice: number | null;
 };
 
 type Summary = {
@@ -92,6 +93,7 @@ export default function DaysToSellContent() {
   const [form, setForm] = useState<VehicleForm>(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<VehicleForm>(emptyForm);
+  const [soldPriceDraft, setSoldPriceDraft] = useState<Record<string, string>>({});
 
   const load = useCallback(async () => {
     if (!user?.token) return;
@@ -167,6 +169,43 @@ export default function DaysToSellContent() {
     } catch (error) {
       console.error(error);
       showToast('Could not update this vehicle', 'error');
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  const saveSoldPrice = async (vehicle: Vehicle) => {
+    if (!user?.token || vehicle.vehicleType === 'Demo') return;
+    const raw = (soldPriceDraft[vehicle.id] ?? (vehicle.soldPrice == null ? '' : vehicle.soldPrice.toFixed(2)))
+      .replace(/[£,\s]/g, '')
+      .trim();
+    const soldPrice = raw === '' ? null : Number(raw);
+    if (soldPrice !== null && (!Number.isFinite(soldPrice) || soldPrice < 0)) {
+      showToast('Enter a valid sold at amount', 'error');
+      return;
+    }
+    setSavingId(vehicle.id);
+    try {
+      const res = await fetch(`/api/sale-window/${vehicle.id}`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ soldPrice }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to update');
+      setVehicles((current) => current.map((item) => (item.id === vehicle.id ? data : item)));
+      setSoldPriceDraft((current) => {
+        const next = { ...current };
+        delete next[vehicle.id];
+        return next;
+      });
+      showToast('Sold at saved', 'success');
+    } catch (error) {
+      console.error(error);
+      showToast('Could not save the sold at amount', 'error');
     } finally {
       setSavingId(null);
     }
@@ -399,6 +438,7 @@ export default function DaysToSellContent() {
                   <th className="px-4 py-3 font-medium">360 days</th>
                   <th className="px-4 py-3 font-medium">Balance</th>
                   <th className="px-4 py-3 font-medium">Interest</th>
+                  <th className="px-4 py-3 font-medium">Sold at (£)</th>
                   <th className="px-4 py-3 font-medium">Closing</th>
                   <th className="px-4 py-3 font-medium"></th>
                 </tr>
@@ -442,6 +482,39 @@ export default function DaysToSellContent() {
                     </td>
                     <td className="px-4 py-3">{formatMoney(vehicle.outstandingAmount)}</td>
                     <td className="px-4 py-3">{formatMoney(vehicle.interestToDate)}</td>
+                    <td className="px-4 py-3">
+                      {vehicle.vehicleType === 'Demo' ? (
+                        <span className="text-gray-400">-</span>
+                      ) : (
+                        <form
+                          className="flex items-center gap-2"
+                          onSubmit={(event) => {
+                            event.preventDefault();
+                            saveSoldPrice(vehicle);
+                          }}
+                        >
+                          <label className="flex items-center rounded-lg border border-gray-200 bg-white">
+                            <span className="pl-2 text-sm font-medium text-gray-500">£</span>
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={soldPriceDraft[vehicle.id] ?? (vehicle.soldPrice == null ? '' : vehicle.soldPrice.toFixed(2))}
+                              onChange={(event) => setSoldPriceDraft((current) => ({ ...current, [vehicle.id]: event.target.value }))}
+                              placeholder="0.00"
+                              aria-label="Sold at in pounds"
+                              className="w-28 rounded-lg bg-white px-2 py-1.5 text-sm text-gray-900 outline-none"
+                            />
+                          </label>
+                          <button
+                            type="submit"
+                            disabled={savingId === vehicle.id}
+                            className="rounded-lg bg-[#0B3D73] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#072A50] disabled:opacity-50"
+                          >
+                            Save
+                          </button>
+                        </form>
+                      )}
+                    </td>
                     <td className="px-4 py-3">{formatMoney(vehicle.closingBalance)}</td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-3">
@@ -469,7 +542,7 @@ export default function DaysToSellContent() {
                   </tr>
                   {editingId === vehicle.id ? (
                     <tr className="border-t border-gray-100 bg-gray-50">
-                      <td colSpan={10} className="px-4 py-4">
+                      <td colSpan={11} className="px-4 py-4">
                         <form
                           className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
                           onSubmit={(event) => {

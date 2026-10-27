@@ -30,7 +30,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const hasInvoiceDate = body.invoiceDate !== undefined;
     const hasFinancingDate = body.financingDate !== undefined;
     const hasAmount = body.outstandingAmount !== undefined;
-    if (!hasSold && !hasType && !hasInvoice && !hasVin && !hasInvoiceDate && !hasFinancingDate && !hasAmount) {
+    const hasSoldPrice = body.soldPrice !== undefined;
+    if (!hasSold && !hasType && !hasInvoice && !hasVin && !hasInvoiceDate && !hasFinancingDate && !hasAmount && !hasSoldPrice) {
       return Response.json({ message: 'Nothing to update' }, { status: 400 });
     }
 
@@ -43,6 +44,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       financingDate?: Date;
       outstandingAmount?: number;
       initialAmount?: number;
+      soldPrice?: number | null;
       updatedAt: Date;
     } = { updatedAt: new Date() };
 
@@ -77,6 +79,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       update.outstandingAmount = amount;
       update.initialAmount = amount;
     }
+    if (hasSoldPrice) {
+      if (body.soldPrice === null || body.soldPrice === '') {
+        update.soldPrice = null;
+      } else {
+        const soldPrice = Number(body.soldPrice);
+        if (!Number.isFinite(soldPrice) || soldPrice < 0) {
+          return Response.json({ message: 'Sold at must be a valid amount' }, { status: 400 });
+        }
+        update.soldPrice = soldPrice;
+      }
+    }
 
     await connectDB();
     if (body.sold === true && update.vehicleType !== 'Stock') {
@@ -84,6 +97,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       if (!current) return Response.json({ message: 'Vehicle not found' }, { status: 404 });
       if (current.vehicleType === 'Demo') {
         return Response.json({ message: 'Demo vehicles cannot be marked sold' }, { status: 400 });
+      }
+    }
+    if (hasSoldPrice) {
+      const currentType = update.vehicleType || (await SaleWindow.findById(id).select('vehicleType'))?.vehicleType;
+      if (currentType === 'Demo') {
+        return Response.json({ message: 'Demo vehicles cannot have a sold at amount' }, { status: 400 });
       }
     }
     if (update.vin || update.invoiceNumber) {

@@ -9,6 +9,7 @@ export interface ISaleWindow extends Document {
   initialAmount: number;
   outstandingAmount: number;
   soldAt?: Date | null;
+  soldPrice?: number | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -23,6 +24,7 @@ const saleWindowSchema = new mongoose.Schema<ISaleWindow>(
     initialAmount: { type: Number, required: true },
     outstandingAmount: { type: Number, required: true },
     soldAt: { type: Date, default: null },
+    soldPrice: { type: Number, default: null },
   },
   { timestamps: true }
 );
