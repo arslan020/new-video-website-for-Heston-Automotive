@@ -12,6 +12,7 @@ import {
   FaUser, FaPlay, FaTimes, FaExternalLinkAlt, FaPaperPlane, FaLink, FaPlus, FaSpinner, FaPuzzlePiece
 } from 'react-icons/fa';
 import UKPhoneInput from '@/components/UKPhoneInput';
+import MotorDeskCustomerSearch from '@/components/MotorDeskCustomerSearch';
 import RegistrationUploadModal from '@/components/RegistrationUploadModal';
 import * as tus from 'tus-js-client';
 
@@ -907,6 +908,15 @@ function MyVideosContent() {
               </button>
             </div>
             <div className="p-6 space-y-4">
+              <MotorDeskCustomerSearch
+                token={user?.token}
+                onSelect={(customer) => setSendForm({
+                  title: customer.title || 'Mr',
+                  name: customer.name,
+                  email: customer.email,
+                  mobile: customer.mobile,
+                })}
+              />
               <div className="grid grid-cols-4 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>

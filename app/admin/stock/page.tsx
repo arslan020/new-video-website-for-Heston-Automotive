@@ -11,6 +11,7 @@ import {
   FaSearch, FaEllipsisV, FaCar, FaVideo, FaTrash, FaCopy, FaCheck, FaExternalLinkAlt, FaPaperPlane
 } from 'react-icons/fa';
 import UKPhoneInput from '@/components/UKPhoneInput';
+import MotorDeskCustomerSearch from '@/components/MotorDeskCustomerSearch';
 
 interface StockItem {
   _id: string;
@@ -624,6 +625,15 @@ function AdminStockContent() {
               </button>
             </div>
             <div className="p-6 space-y-4">
+              <MotorDeskCustomerSearch
+                token={user?.token}
+                onSelect={(customer) => setSendForm({
+                  title: customer.title || 'Mr',
+                  name: customer.name,
+                  email: customer.email,
+                  mobile: customer.mobile,
+                })}
+              />
               <div className="grid grid-cols-4 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>

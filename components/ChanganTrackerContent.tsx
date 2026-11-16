@@ -7,6 +7,7 @@ import { useToast } from '@/components/ToastProvider';
 import { TRACKING_STAGES } from '@/lib/trackingStages';
 import { coloursForVehicle, matchStockColour } from '@/lib/exteriorColours';
 import UKPhoneInput from '@/components/UKPhoneInput';
+import MotorDeskCustomerSearch from '@/components/MotorDeskCustomerSearch';
 import { PageTitle } from '@/components/ui/PageTitle';
 import { FaCar, FaLink, FaCheck, FaSync, FaPaperPlane, FaTimes, FaPlus, FaTrash, FaChevronDown } from 'react-icons/fa';
 
@@ -1012,6 +1013,15 @@ export default function ChanganTrackerContent() {
               </button>
             </div>
             <div className="p-6 space-y-4">
+              <MotorDeskCustomerSearch
+                token={user?.token}
+                onSelect={(customer) => setSendForm({
+                  title: customer.title || 'Mr',
+                  name: customer.name,
+                  email: customer.email,
+                  mobile: customer.mobile,
+                })}
+              />
               <div className="grid grid-cols-4 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
@@ -1095,6 +1105,16 @@ export default function ChanganTrackerContent() {
             </div>
 
             <div className="space-y-5 overflow-y-auto px-6 py-5">
+              <MotorDeskCustomerSearch
+                token={user?.token}
+                onSelect={(customer) => setOrderForm((current) => ({
+                  ...current,
+                  title: customer.title || current.title,
+                  name: customer.name,
+                  email: customer.email,
+                  mobile: customer.mobile,
+                }))}
+              />
               <div className="grid grid-cols-[88px_1fr] gap-3">
                 <div>
                   <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Title</label>

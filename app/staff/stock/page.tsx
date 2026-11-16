@@ -9,6 +9,7 @@ import { PageTitle } from '@/components/ui/PageTitle';
 import RegistrationUploadModal from '@/components/RegistrationUploadModal';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useToast } from '@/components/ToastProvider';
+import MotorDeskCustomerSearch from '@/components/MotorDeskCustomerSearch';
 import {
   FaCar, FaVideo, FaCopy, FaCheckCircle, FaCheck, FaPlus, FaCloudUploadAlt,
   FaTimes, FaSearch, FaGasPump, FaCog, FaPalette,
@@ -810,6 +811,15 @@ function StockContent() {
           <div className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col animate-slide-left">
             <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center"><div><h3 className="font-bold text-lg text-gray-800">Send Video to Customer</h3><p className="text-xs text-gray-500 mt-1 truncate max-w-[250px]">{selectedVideo?.title}</p></div><button onClick={handleCloseSendModal} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-full transition">&times;</button></div>
             <div className="flex-1 overflow-y-auto p-6"><div className="space-y-4">
+               <MotorDeskCustomerSearch
+                 token={user?.token}
+                 onSelect={(customer) => setSendForm({
+                   title: customer.title || 'Mr',
+                   name: customer.name,
+                   email: customer.email,
+                   mobile: customer.mobile,
+                 })}
+               />
                <div className="flex gap-4">
                  <div className="w-1/3"><label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Title</label><select value={sendForm.title} onChange={e => setSendForm(p => ({ ...p, title: e.target.value }))} className="w-full px-4 py-2.5 border border-gray-200 rounded-lg bg-white text-sm"><option value="Mr">Mr</option><option value="Mrs">Mrs</option><option value="Miss">Miss</option><option value="Ms">Ms</option><option value="Dr">Dr</option></select></div>
                  <div className="w-2/3"><label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Customer Name</label><input type="text" value={sendForm.name} onChange={e => setSendForm(p => ({ ...p, name: e.target.value }))} placeholder="e.g. John Smith" className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm" /></div>

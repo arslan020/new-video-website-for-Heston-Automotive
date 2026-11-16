@@ -3,6 +3,7 @@ import axios from 'axios';
 import { connectDB } from '@/lib/mongodb';
 import Stock from '@/models/Stock';
 import { getUserFromRequest, unauthorizedResponse } from '@/lib/auth';
+import { lookupMotorDeskVehicle } from '@/lib/motordesk';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ registration: string }> }) {
   const user = await getUserFromRequest(req);
@@ -12,6 +13,16 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ regi
     await connectDB();
     const { registration } = await params;
     const reg = registration.replace(/\s/g, '').toUpperCase();
+
+    try {
+      const motorDeskVehicle = await lookupMotorDeskVehicle(reg);
+      if (motorDeskVehicle) {
+        return Response.json({ source: 'motordesk', vehicle: motorDeskVehicle, features: [], media: { images: [] } });
+      }
+    } catch (motorDeskErr) {
+      console.error('Motor Desk lookup error:', motorDeskErr);
+    }
+
     const advertiserId = process.env.AUTOTRADER_ADVERTISER_ID!;
 
     const stockRecord = await Stock.findOne({ advertiserId });
