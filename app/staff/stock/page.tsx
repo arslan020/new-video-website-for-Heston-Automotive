@@ -2,7 +2,6 @@
 
 import { Suspense, useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import * as tus from 'tus-js-client';
 import { useAuth } from '@/context/AuthContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import { PageTitle } from '@/components/ui/PageTitle';
@@ -10,6 +9,7 @@ import RegistrationUploadModal from '@/components/RegistrationUploadModal';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useToast } from '@/components/ToastProvider';
 import MotorDeskCustomerSearch from '@/components/MotorDeskCustomerSearch';
+import { startCloudflareUpload } from '@/lib/cloudflareUploadClient';
 import {
   FaCar, FaVideo, FaCopy, FaCheckCircle, FaCheck, FaPlus, FaCloudUploadAlt,
   FaTimes, FaSearch, FaGasPump, FaCog, FaPalette,
@@ -281,40 +281,20 @@ function StockContent() {
       setUploading(true); setUploadProgress(0); setUploadPhase('cloudflare');
       try {
           // Step 1: create a TUS upload slot on Cloudflare (server-side auth, returns TUS URL + uid)
-          const urlRes = await fetch('/api/cloudflare/tus-create', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user?.token}` },
-              body: JSON.stringify({ title: meta.title, fileSize: meta.file.size }),
+          const upload = startCloudflareUpload({
+              token: user?.token || '',
+              file: meta.file,
+              title: meta.title,
+              onProgress: setUploadProgress,
+              onReady: (id) => {
+                  pendingUidRef.current = id;
+              },
           });
-          if (!urlRes.ok) throw new Error('Failed to create upload slot');
-          const { tusUrl, uid } = await urlRes.json();
-          pendingUidRef.current = uid;
-
-          // Step 2: upload directly browser → Cloudflare via TUS (resumable, bypasses Vercel)
-          await new Promise<void>((resolve, reject) => {
-              let cancelled = false;
-              const upload = new tus.Upload(meta.file, {
-                  uploadUrl: tusUrl,
-                  chunkSize: 50 * 1024 * 1024, // 50 MB chunks (divisible by 256 KiB, per CF requirement)
-                  retryDelays: [0, 3000, 5000, 10000, 20000],
-                  onProgress(bytesUploaded, bytesTotal) {
-                      setUploadProgress(Math.round((bytesUploaded / bytesTotal) * 100));
-                  },
-                  onSuccess() {
-                      abortControllerRef.current = null;
-                      resolve();
-                  },
-                  onError(err) {
-                      abortControllerRef.current = null;
-                      if (cancelled) reject(new Error('Upload cancelled'));
-                      else reject(err);
-                  },
-              });
-              const ac = new AbortController();
-              abortControllerRef.current = ac;
-              ac.signal.addEventListener('abort', () => { cancelled = true; upload.abort(); });
-              upload.start();
-          });
+          const ac = new AbortController();
+          abortControllerRef.current = ac;
+          ac.signal.addEventListener('abort', () => upload.abort());
+          const uid = await upload.done;
+          abortControllerRef.current = null;
 
           setUploadProgress(100);
           pendingUidRef.current = null;

@@ -14,7 +14,7 @@ import {
 import UKPhoneInput from '@/components/UKPhoneInput';
 import MotorDeskCustomerSearch from '@/components/MotorDeskCustomerSearch';
 import RegistrationUploadModal from '@/components/RegistrationUploadModal';
-import * as tus from 'tus-js-client';
+import { startCloudflareUpload } from '@/lib/cloudflareUploadClient';
 
 interface SubPart {
   _id: string;
@@ -290,27 +290,13 @@ function MyVideosContent() {
     setSubPartUploading(true);
     setSubPartUploadProgress(0);
     try {
-      const createRes = await fetch('/api/cloudflare/tus-create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user?.token}` },
-        body: JSON.stringify({ title: subPartName, fileSize: subPartFile.size }),
+      const upload = startCloudflareUpload({
+        token: user?.token || '',
+        file: subPartFile,
+        title: subPartName,
+        onProgress: setSubPartUploadProgress,
       });
-      if (!createRes.ok) throw new Error('Failed to create upload');
-      const { tusUrl, uid } = await createRes.json();
-
-      await new Promise<void>((resolve, reject) => {
-        const upload = new tus.Upload(subPartFile, {
-          uploadUrl: tusUrl,
-          chunkSize: 50 * 1024 * 1024,
-          retryDelays: [0, 3000, 5000, 10000, 20000],
-          onProgress: (uploaded: number, total: number) => {
-            setSubPartUploadProgress(Math.round((uploaded / total) * 100));
-          },
-          onSuccess: () => resolve(),
-          onError: (e: Error) => reject(e),
-        });
-        upload.start();
-      });
+      const uid = await upload.done;
 
       const saveRes = await fetch(`/api/videos/${videoId}/subparts`, {
         method: 'POST',

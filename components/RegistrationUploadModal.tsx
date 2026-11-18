@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import * as tus from 'tus-js-client';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/components/ToastProvider';
+import { startCloudflareUpload } from '@/lib/cloudflareUploadClient';
 import {
   FaVideo, FaTimes, FaSearch, FaGasPump, FaCog, FaPalette, FaCalendar,
   FaCloudUploadAlt, FaCheck,
@@ -29,14 +29,12 @@ export default function RegistrationUploadModal({
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
   const pendingUidRef = useRef<string | null>(null);
+  const uploadHandleRef = useRef<{ abort: () => void } | null>(null);
 
   const cleanupPending = () => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-    }
+    uploadHandleRef.current?.abort();
+    uploadHandleRef.current = null;
     if (pendingUidRef.current) {
       fetch(`/api/videos/cloudflare/${pendingUidRef.current}`, {
         method: 'DELETE',
@@ -94,48 +92,20 @@ export default function RegistrationUploadModal({
     setUploading(true);
     setUploadProgress(0);
     try {
-      const urlRes = await fetch('/api/cloudflare/tus-create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user?.token}` },
-        body: JSON.stringify({
-          title: `${fetchedVehicle.make} ${fetchedVehicle.model} - ${fetchedVehicle.registration}`,
-          fileSize: selectedFile.size,
-        }),
+      const upload = startCloudflareUpload({
+        token: user?.token || '',
+        file: selectedFile,
+        title: `${fetchedVehicle.make} ${fetchedVehicle.model} - ${fetchedVehicle.registration}`,
+        onProgress: setUploadProgress,
+        onReady: (uid) => {
+          pendingUidRef.current = uid;
+        },
       });
-      if (!urlRes.ok) throw new Error('Failed to create upload slot');
-      const { tusUrl, uid } = await urlRes.json();
-      pendingUidRef.current = uid;
-
-      await new Promise<void>((resolve, reject) => {
-        let cancelled = false;
-        const upload = new tus.Upload(selectedFile, {
-          uploadUrl: tusUrl,
-          chunkSize: 50 * 1024 * 1024,
-          retryDelays: [0, 3000, 5000, 10000, 20000],
-          onProgress(bytesUploaded, bytesTotal) {
-            setUploadProgress(Math.round((bytesUploaded / bytesTotal) * 100));
-          },
-          onSuccess() {
-            abortControllerRef.current = null;
-            resolve();
-          },
-          onError(err) {
-            abortControllerRef.current = null;
-            if (cancelled) reject(new Error('Upload cancelled'));
-            else reject(err);
-          },
-        });
-        const controller = new AbortController();
-        abortControllerRef.current = controller;
-        controller.signal.addEventListener('abort', () => {
-          cancelled = true;
-          upload.abort();
-        });
-        upload.start();
-      });
-
-      setUploadProgress(100);
+      uploadHandleRef.current = upload;
+      const uid = await upload.done;
+      uploadHandleRef.current = null;
       pendingUidRef.current = null;
+      setUploadProgress(100);
 
       const saveRes = await fetch('/api/videos', {
         method: 'POST',
