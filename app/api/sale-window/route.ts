@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import SaleWindow from '@/models/SaleWindow';
 import { getUserFromRequest, unauthorizedResponse, forbiddenResponse } from '@/lib/auth';
-import { compareSaleWindows, ensureSaleWindows, toView, utcToday } from '@/lib/saleWindow';
+import { applyMotorDeskSoldPrices, compareSaleWindows, ensureSaleWindows, toView, utcToday } from '@/lib/saleWindow';
 
 function utcDate(value: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
     await ensureSaleWindows();
     const today = utcToday();
     const records = await SaleWindow.find({}).sort({ invoiceDate: 1 });
+    await applyMotorDeskSoldPrices(records);
     const vehicles = records
       .map((record) => toView(record, today))
       .sort(compareSaleWindows);

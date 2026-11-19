@@ -1,5 +1,6 @@
 import SaleWindow, { ISaleWindow } from '@/models/SaleWindow';
 import { sendEmail } from '@/lib/email';
+import { soldPricesForVins } from '@/lib/motordesk';
 
 export const SALE_WINDOW_EMAILS = [
   'eesa@hestonautomotive.com',
@@ -100,6 +101,25 @@ export function toView(record: ISaleWindow, today = utcToday()): SaleWindowView 
     soldAt: record.soldAt ? new Date(record.soldAt).toISOString() : null,
     soldPrice: typeof record.soldPrice === 'number' ? record.soldPrice : null,
   };
+}
+
+export async function applyMotorDeskSoldPrices(records: ISaleWindow[]) {
+  const missing = records.filter((record) => record.vehicleType !== 'Demo' && record.soldPrice == null);
+  if (missing.length === 0) return;
+  try {
+    const prices = await soldPricesForVins(missing.map((record) => record.vin));
+    await Promise.all(missing.map(async (record) => {
+      const price = prices[record.vin.trim().toUpperCase()];
+      if (price == null) return;
+      await SaleWindow.collection.updateOne(
+        { _id: record._id },
+        { $set: { soldPrice: price, updatedAt: new Date() } }
+      );
+      record.soldPrice = price;
+    }));
+  } catch (err) {
+    console.error('Motor Desk sold price lookup failed', err);
+  }
 }
 
 export async function ensureSaleWindows() {
@@ -210,6 +230,7 @@ export async function sendSaleWindowReminder(recipients = SALE_WINDOW_EMAILS) {
   const today = utcToday();
   await ensureSaleWindows();
   const records = await SaleWindow.find().sort({ invoiceDate: 1 });
+  await applyMotorDeskSoldPrices(records);
   const rows = records.map((record) => toView(record, today)).sort(compareSaleWindows);
   const isSold = (row: SaleWindowView) => Boolean(row.soldAt) && row.vehicleType !== 'Demo';
   const demo = rows.filter((row) => row.vehicleType === 'Demo');

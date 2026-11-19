@@ -8,10 +8,11 @@ export async function GET(req: NextRequest) {
   if (user.role !== 'admin' && user.role !== 'staff') return forbiddenResponse();
 
   const query = new URL(req.url).searchParams.get('q') || '';
+  const limit = Number(new URL(req.url).searchParams.get('limit') || '8');
   if (query.trim().length < 2) return Response.json({ customers: [] });
 
   try {
-    const customers = await searchMotorDeskCustomers(query);
+    const customers = await searchMotorDeskCustomers(query, limit);
     return Response.json({ customers });
   } catch (err) {
     console.error(err);

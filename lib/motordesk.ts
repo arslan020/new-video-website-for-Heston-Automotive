@@ -151,12 +151,13 @@ async function fetchContacts(params: URLSearchParams) {
     .filter((row: MotorDeskCustomer | null): row is MotorDeskCustomer => Boolean(row));
 }
 
-export async function searchMotorDeskCustomers(query: string) {
+export async function searchMotorDeskCustomers(query: string, limit = 8) {
   const q = query.trim();
   if (q.length < 2) return [];
   const digits = q.replace(/\D/g, '');
   const compact = q.replace(/\s/g, '');
-  const params = new URLSearchParams({ per_page: '8', view: 'full' });
+  const perPage = String(Math.min(20, Math.max(1, limit)));
+  const params = new URLSearchParams({ per_page: perPage, view: 'full' });
   if (q.includes('@')) params.set('email', `%${q}%`);
   else if (digits.length >= 6 && digits.length >= compact.length - 1) params.set('mobile', `%${digits}%`);
   else params.set('name', `%${q}%`);
@@ -166,4 +167,51 @@ export async function searchMotorDeskCustomers(query: string) {
   params.delete('mobile');
   params.set('telephone', `%${digits}%`);
   return fetchContacts(params);
+}
+
+export async function getMotorDeskCustomer(id: number) {
+  if (!Number.isInteger(id) || id <= 0) return null;
+  const body = await motorDeskFetch(`/contacts/${id}?view=full`);
+  const row = body?.data;
+  if (!row || typeof row !== 'object') return null;
+  return mapContact(row as Record<string, unknown>);
+}
+
+export async function soldPricesForVins(vins: string[]) {
+  const wanted = new Set(vins.map((vin) => vin.trim().toUpperCase()).filter(Boolean));
+  const best = new Map<string, { price: number; rank: number; paid: number }>();
+  if (wanted.size === 0) return {} as Record<string, number>;
+
+  for (let page = 1; page <= 20; page += 1) {
+    const body = await motorDeskFetch(`/invoices?${new URLSearchParams({
+      per_page: '100',
+      page: String(page),
+      view: 'full',
+      fields: 'status.name,paid,totals.total_sale,vehicle_snapshot.vin',
+    })}`);
+    const rows = Array.isArray(body?.data) ? body.data as Record<string, unknown>[] : [];
+    for (const row of rows) {
+      const snapshot = row.vehicle_snapshot && typeof row.vehicle_snapshot === 'object'
+        ? row.vehicle_snapshot as Record<string, unknown>
+        : {};
+      const vin = textOf(snapshot.vin).toUpperCase();
+      if (!wanted.has(vin)) continue;
+      const status = row.status && typeof row.status === 'object'
+        ? textOf((row.status as Record<string, unknown>).name)
+        : '';
+      const rank = status === 'paid' ? 2 : status === 'issued' ? 1 : 0;
+      if (rank === 0) continue;
+      const totals = row.totals && typeof row.totals === 'object' ? row.totals as Record<string, unknown> : {};
+      const price = Number(totals.total_sale);
+      if (!Number.isFinite(price) || price <= 0) continue;
+      const paid = Number(row.paid) || 0;
+      const current = best.get(vin);
+      if (!current || rank > current.rank || (rank === current.rank && paid >= current.paid)) {
+        best.set(vin, { price, rank, paid });
+      }
+    }
+    if (rows.length < 100) break;
+  }
+
+  return Object.fromEntries([...best].map(([vin, value]) => [vin, value.price]));
 }

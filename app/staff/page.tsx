@@ -14,6 +14,7 @@ import { SectionHeader } from '@/components/ui/SectionHeader';
 import { PageTitle } from '@/components/ui/PageTitle';
 import { useToast } from '@/components/ToastProvider';
 import RegistrationUploadModal from '@/components/RegistrationUploadModal';
+import OffersModal from '@/components/OffersModal';
 
 interface VideoView {
     viewerName?: string;
@@ -126,6 +127,7 @@ const StaffDashboard = () => {
     const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
 
     const [uploadOpen, setUploadOpen] = useState(false);
+    const [offersOpen, setOffersOpen] = useState(false);
     const [reserveLinkModalOpen, setReserveLinkModalOpen] = useState(false);
     const [reserveLinkVideo, setReserveLinkVideo] = useState<Video | null>(null);
     const [reserveLink, setReserveLink] = useState('');
@@ -324,6 +326,13 @@ const StaffDashboard = () => {
                             className="h-10 rounded-lg border border-[#E2E8F0] bg-white px-4 text-sm font-medium text-[#0F172A]"
                         >
                             Sync stock
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setOffersOpen(true)}
+                            className="h-10 rounded-lg border border-[#E2E8F0] bg-white px-4 text-sm font-medium text-[#0F172A]"
+                        >
+                            Offers
                         </button>
                         <button
                             type="button"
@@ -617,6 +626,14 @@ const StaffDashboard = () => {
                 <RegistrationUploadModal
                     onClose={() => setUploadOpen(false)}
                     onUploaded={fetchVideos}
+                />
+            )}
+            {offersOpen && (
+                <OffersModal
+                    token={user?.token}
+                    onClose={() => setOffersOpen(false)}
+                    onSent={(message) => showToast(message, 'success')}
+                    onError={(message) => showToast(message, 'error')}
                 />
             )}
         </DashboardLayout>
