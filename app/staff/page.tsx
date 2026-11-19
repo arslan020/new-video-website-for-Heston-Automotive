@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useAuth } from '@/context/AuthContext';
-import { FaLink, FaCar, FaEye, FaTimes, FaUser } from 'react-icons/fa';
+import { FaLink, FaCar, FaEye, FaTimes, FaUser, FaBullhorn } from 'react-icons/fa';
 import NeedsAttention from '@/components/NeedsAttention';
 import { Card } from '@/components/ui/Card';
 import { StatCard } from '@/components/ui/StatCard';
@@ -322,16 +322,14 @@ const StaffDashboard = () => {
                     <div className="flex items-center gap-2">
                         <button
                             type="button"
-                            onClick={() => router.push('/staff/stock')}
-                            className="h-10 rounded-lg border border-[#E2E8F0] bg-white px-4 text-sm font-medium text-[#0F172A]"
-                        >
-                            Sync stock
-                        </button>
-                        <button
-                            type="button"
                             onClick={() => setOffersOpen(true)}
-                            className="h-10 rounded-lg border border-[#E2E8F0] bg-white px-4 text-sm font-medium text-[#0F172A]"
+                            className="relative inline-flex h-11 items-center gap-2 rounded-xl bg-[#F5B400] px-5 text-sm font-semibold text-[#0B3D73] shadow-[0_10px_24px_-10px_rgba(245,180,0,0.95)] ring-2 ring-[#F5B400]/50 hover:bg-[#FFC72C]"
                         >
+                            <span className="absolute -right-1 -top-1 flex h-3 w-3">
+                                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#0B3D73] opacity-60" />
+                                <span className="relative inline-flex h-3 w-3 rounded-full bg-[#0B3D73]" />
+                            </span>
+                            <FaBullhorn size={14} />
                             Offers
                         </button>
                         <button
