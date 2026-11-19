@@ -1,7 +1,9 @@
 import * as tus from 'tus-js-client';
 
 const DIRECT_LIMIT = 200 * 1024 * 1024;
-const CHUNK_SIZE = 150 * 1024 * 1024;
+// Cloudflare allows 5MB to 200MB chunks. 50MB is the size they recommend for a stable browser upload.
+// Larger chunks were resetting the connection before any progress, which left big videos stuck at 0%.
+const CHUNK_SIZE = 50 * 1024 * 1024;
 
 type Options = {
   token: string;
@@ -106,6 +108,7 @@ function patchFile(
       storeFingerprintForResuming: false,
       removeFingerprintOnSuccess: true,
       retryDelays: [0, 1000, 3000, 5000],
+      httpStack: new SkipHeadStack(file.size),
       onProgress(bytesUploaded, bytesTotal) {
         onProgress(Math.round((bytesUploaded / bytesTotal) * 100));
       },
@@ -124,3 +127,93 @@ function patchFile(
     upload.start();
   });
 }
+
+class SkipHeadStack {
+  constructor(private fileSize: number) {}
+
+  getName() {
+    return 'SkipHeadStack';
+  }
+
+  createRequest(method: string, url: string) {
+    if (method === 'HEAD') return new HeadRequest(this.fileSize);
+    return new PatchRequest(method, url);
+  }
+}
+
+class HeadRequest {
+  constructor(private fileSize: number) {}
+
+  getMethod() { return 'HEAD'; }
+  getURL() { return ''; }
+  setHeader() {}
+  getHeader() { return undefined; }
+  setProgressHandler() {}
+  send() {
+    const fileSize = this.fileSize;
+    return Promise.resolve({
+      getStatus: () => 200,
+      getHeader: (header: string) => {
+        const name = header.toLowerCase();
+        if (name === 'upload-offset') return '0';
+        if (name === 'upload-length') return String(fileSize);
+        if (name === 'tus-resumable') return '1.0.0';
+        return undefined;
+      },
+      getBody: () => '',
+      getUnderlyingObject: () => ({}),
+    });
+  }
+  abort() { return Promise.resolve(); }
+  getUnderlyingObject() { return {}; }
+}
+
+class PatchRequest {
+  private xhr = new XMLHttpRequest();
+  private headers: Record<string, string> = {};
+
+  constructor(private method: string, private url: string) {
+    this.xhr.open(method, url, true);
+  }
+
+  getMethod() { return this.method; }
+  getURL() { return this.url; }
+  setHeader(header: string, value: string) {
+    this.xhr.setRequestHeader(header, value);
+    this.headers[header] = value;
+  }
+  getHeader(header: string) { return this.headers[header]; }
+  setProgressHandler(handler: (bytesSent: number) => void) {
+    this.xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) handler(event.loaded);
+    };
+  }
+  send(body?: Document | XMLHttpRequestBodyInit | null) {
+    return new Promise<HttpResponseLike>((resolve, reject) => {
+      this.xhr.onload = () => resolve(new XhrResponse(this.xhr));
+      this.xhr.onerror = () => reject(new Error('Upload connection dropped'));
+      this.xhr.onabort = () => reject(new Error('Upload cancelled'));
+      this.xhr.send(body);
+    });
+  }
+  abort() {
+    this.xhr.abort();
+    return Promise.resolve();
+  }
+  getUnderlyingObject() { return this.xhr; }
+}
+
+class XhrResponse {
+  constructor(private xhr: XMLHttpRequest) {}
+  getStatus() { return this.xhr.status; }
+  getHeader(header: string) { return this.xhr.getResponseHeader(header) || undefined; }
+  getBody() { return this.xhr.responseText; }
+  getUnderlyingObject() { return this.xhr; }
+}
+
+type HttpResponseLike = {
+  getStatus: () => number;
+  getHeader: (header: string) => string | undefined;
+  getBody: () => string;
+  getUnderlyingObject: () => unknown;
+};
