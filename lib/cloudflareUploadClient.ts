@@ -1,9 +1,10 @@
 import * as tus from 'tus-js-client';
 
 const DIRECT_LIMIT = 200 * 1024 * 1024;
-// Cloudflare allows 5MB to 200MB chunks. 50MB is the size they recommend for a stable browser upload.
-// Larger chunks were resetting the connection before any progress, which left big videos stuck at 0%.
-const CHUNK_SIZE = 50 * 1024 * 1024;
+// Cloudflare allows 5,242,880 to 209,715,200 bytes, in steps of 256 KiB.
+// 50MB chunks were reset before the first progress update, so large files use the minimum size.
+const CHUNK_SIZE = 5_242_880;
+const STALL_MS = 30_000;
 
 type Options = {
   token: string;
@@ -19,38 +20,32 @@ export function startCloudflareUpload(options: Options) {
   let aborted = false;
 
   const done = (async () => {
-    const direct = options.file.size < DIRECT_LIMIT;
-    const res = await fetch(direct ? '/api/cloudflare/direct-upload' : '/api/cloudflare/tus-create', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${options.token}`,
-      },
-      body: JSON.stringify(
-        direct
-          ? { title: options.title }
-          : { title: options.title, fileSize: options.file.size }
-      ),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.message || 'Failed to create upload slot');
-    if (aborted) throw new Error('Upload cancelled');
+    if (options.file.size < DIRECT_LIMIT) {
+      const res = await fetch('/api/cloudflare/direct-upload', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${options.token}`,
+        },
+        body: JSON.stringify({ title: options.title }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || 'Failed to create upload slot');
+      if (aborted) throw new Error('Upload cancelled');
 
-    const uid = String(data.uid || '');
-    if (!uid) throw new Error('Failed to create upload slot');
-    options.onReady?.(uid);
-
-    if (direct) {
+      const uid = String(data.uid || '');
+      if (!uid) throw new Error('Failed to create upload slot');
+      options.onReady?.(uid);
       await postFile(data.uploadURL, options.file, options.onProgress, (request) => {
         xhr = request;
       }, () => aborted);
-    } else {
-      await patchFile(data.tusUrl, options.file, options.onProgress, (upload) => {
-        tusUpload = upload;
-      }, () => aborted);
+      return uid;
     }
 
-    return uid;
+    if (aborted) throw new Error('Upload cancelled');
+    return patchFile(options, (upload) => {
+      tusUpload = upload;
+    }, () => aborted);
   })();
 
   return {
@@ -94,26 +89,47 @@ function postFile(
 }
 
 function patchFile(
-  tusUrl: string,
-  file: File,
-  onProgress: (percent: number) => void,
+  options: Options,
   capture: (upload: tus.Upload) => void,
   isAborted: () => boolean,
 ) {
-  return new Promise<void>((resolve, reject) => {
-    const upload = new tus.Upload(file, {
-      uploadUrl: tusUrl,
-      uploadSize: file.size,
+  return new Promise<string>((resolve, reject) => {
+    let uid = '';
+    const remember = (value: string | null | undefined) => {
+      const next = String(value || '').trim();
+      if (!next || uid) return;
+      uid = next;
+      options.onReady?.(next);
+    };
+
+    const upload = new tus.Upload(options.file, {
+      endpoint: '/api/cloudflare/tus-create',
+      uploadSize: options.file.size,
       chunkSize: CHUNK_SIZE,
+      retryDelays: [0, 1000, 3000, 5000, 10000, 20000, 30000],
       storeFingerprintForResuming: false,
       removeFingerprintOnSuccess: true,
-      retryDelays: [0, 1000, 3000, 5000],
-      httpStack: new SkipHeadStack(file.size),
+      metadata: { name: options.title },
+      httpStack: new StallStack(),
+      onBeforeRequest(req) {
+        const url = req.getURL();
+        if (url.includes('/api/cloudflare/tus-create')) {
+          req.setHeader('Authorization', `Bearer ${options.token}`);
+        }
+      },
+      onAfterResponse(req, res) {
+        remember(res.getHeader('stream-media-id'));
+        if (!uid) remember(uidFrom(res.getHeader('Location') || req.getURL()));
+      },
       onProgress(bytesUploaded, bytesTotal) {
-        onProgress(Math.round((bytesUploaded / bytesTotal) * 100));
+        options.onProgress(Math.round((bytesUploaded / bytesTotal) * 100));
       },
       onSuccess() {
-        resolve();
+        if (!uid) {
+          reject(new Error('Upload finished without a video id'));
+          return;
+        }
+        resolve(uid);
       },
       onError(error) {
         reject(isAborted() ? new Error('Upload cancelled') : error);
@@ -128,49 +144,24 @@ function patchFile(
   });
 }
 
-class SkipHeadStack {
-  constructor(private fileSize: number) {}
+function uidFrom(value: string) {
+  return value.match(/[a-f0-9]{32}/i)?.[0] || '';
+}
 
+class StallStack {
   getName() {
-    return 'SkipHeadStack';
+    return 'StallStack';
   }
 
   createRequest(method: string, url: string) {
-    if (method === 'HEAD') return new HeadRequest(this.fileSize);
-    return new PatchRequest(method, url);
+    return new XhrRequest(method, url);
   }
 }
 
-class HeadRequest {
-  constructor(private fileSize: number) {}
-
-  getMethod() { return 'HEAD'; }
-  getURL() { return ''; }
-  setHeader() {}
-  getHeader() { return undefined; }
-  setProgressHandler() {}
-  send() {
-    const fileSize = this.fileSize;
-    return Promise.resolve({
-      getStatus: () => 200,
-      getHeader: (header: string) => {
-        const name = header.toLowerCase();
-        if (name === 'upload-offset') return '0';
-        if (name === 'upload-length') return String(fileSize);
-        if (name === 'tus-resumable') return '1.0.0';
-        return undefined;
-      },
-      getBody: () => '',
-      getUnderlyingObject: () => ({}),
-    });
-  }
-  abort() { return Promise.resolve(); }
-  getUnderlyingObject() { return {}; }
-}
-
-class PatchRequest {
+class XhrRequest {
   private xhr = new XMLHttpRequest();
   private headers: Record<string, string> = {};
+  private stalled = false;
 
   constructor(private method: string, private url: string) {
     this.xhr.open(method, url, true);
@@ -185,14 +176,36 @@ class PatchRequest {
   getHeader(header: string) { return this.headers[header]; }
   setProgressHandler(handler: (bytesSent: number) => void) {
     this.xhr.upload.onprogress = (event) => {
+      this.touch();
       if (event.lengthComputable) handler(event.loaded);
     };
   }
   send(body?: Document | XMLHttpRequestBodyInit | null) {
+    let lastByte = Date.now();
+    const touch = () => {
+      lastByte = Date.now();
+    };
+    this.touch = touch;
+    const timer = window.setInterval(() => {
+      if (Date.now() - lastByte < STALL_MS) return;
+      this.stalled = true;
+      this.xhr.abort();
+    }, 5000);
+
     return new Promise<HttpResponseLike>((resolve, reject) => {
-      this.xhr.onload = () => resolve(new XhrResponse(this.xhr));
-      this.xhr.onerror = () => reject(new Error('Upload connection dropped'));
-      this.xhr.onabort = () => reject(new Error('Upload cancelled'));
+      const finish = () => window.clearInterval(timer);
+      this.xhr.onload = () => {
+        finish();
+        resolve(new XhrResponse(this.xhr));
+      };
+      this.xhr.onerror = () => {
+        finish();
+        reject(new Error('Upload connection dropped'));
+      };
+      this.xhr.onabort = () => {
+        finish();
+        reject(new Error(this.stalled ? 'Upload connection dropped' : 'Upload cancelled'));
+      };
       this.xhr.send(body);
     });
   }
@@ -201,6 +214,7 @@ class PatchRequest {
     return Promise.resolve();
   }
   getUnderlyingObject() { return this.xhr; }
+  private touch() {}
 }
 
 class XhrResponse {

@@ -12,9 +12,11 @@ export async function POST(req: NextRequest) {
     return Response.json({ message: 'Cloudflare credentials not configured' }, { status: 500 });
   }
 
-  const { title, fileSize } = await req.json();
-
-  const nameB64 = Buffer.from(title || 'Video Upload').toString('base64');
+  const uploadLength = req.headers.get('upload-length');
+  const uploadMetadata = req.headers.get('upload-metadata');
+  if (!uploadLength) {
+    return Response.json({ message: 'Missing upload length' }, { status: 400 });
+  }
 
   const res = await fetch(
     `https://api.cloudflare.com/client/v4/accounts/${accountId}/stream?direct_user=true`,
@@ -23,8 +25,8 @@ export async function POST(req: NextRequest) {
       headers: {
         Authorization: `Bearer ${apiToken}`,
         'Tus-Resumable': '1.0.0',
-        'Upload-Length': String(fileSize),
-        'Upload-Metadata': `name ${nameB64}`,
+        'Upload-Length': uploadLength,
+        ...(uploadMetadata ? { 'Upload-Metadata': uploadMetadata } : {}),
       },
     }
   );
@@ -42,5 +44,14 @@ export async function POST(req: NextRequest) {
     return Response.json({ message: 'Missing Location or stream-media-id from Cloudflare' }, { status: 500 });
   }
 
-  return Response.json({ tusUrl, uid });
+  // 201 with Location is the tus creation response. The browser then uploads straight to that URL.
+  return new Response(null, {
+    status: 201,
+    headers: {
+      Location: tusUrl,
+      'stream-media-id': uid,
+      'Tus-Resumable': '1.0.0',
+      'Access-Control-Expose-Headers': 'Location, stream-media-id',
+    },
+  });
 }
