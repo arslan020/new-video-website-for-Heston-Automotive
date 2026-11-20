@@ -527,12 +527,6 @@ function MyVideosContent() {
     return !!(r && stockRegs.size > 0 && !stockRegs.has(r));
   }).length;
 
-  const brandLogoUrl = (make?: string) => {
-    if (!make) return null;
-    const slug = make.toLowerCase().trim().replace(/\s+/g, '-');
-    return `https://raw.githubusercontent.com/filippofilip95/car-logos-dataset/master/logos/optimized/${slug}.png`;
-  };
-
   const thumbSrc = (video: Video) => {
     if (video.deletedAt) return null;
     if (video.thumbnailUrl) return video.thumbnailUrl;
@@ -676,7 +670,7 @@ function MyVideosContent() {
                           <div className="flex items-center gap-2 sm:gap-3">
                             <button
                               type="button"
-                              className={`w-16 h-11 sm:w-20 sm:h-14 rounded-xl overflow-hidden flex-shrink-0 border border-gray-200 cursor-pointer group/thumb relative flex items-center justify-center shadow-sm ${!thumbSrc(video) && brandLogoUrl(video.make) ? 'bg-white' : 'bg-gray-900'}`}
+                              className="w-16 h-11 sm:w-20 sm:h-14 rounded-xl overflow-hidden flex-shrink-0 border border-gray-200 cursor-pointer group/thumb relative flex items-center justify-center bg-gray-900 shadow-sm"
                               onClick={() => setSelectedVideo(video)}
                             >
                               {thumbSrc(video) ? (
@@ -688,18 +682,6 @@ function MyVideosContent() {
                                     (e.target as HTMLImageElement).onerror = null;
                                     (e.target as HTMLImageElement).src =
                                       'https://via.placeholder.com/160x90?text=Video';
-                                  }}
-                                />
-                              ) : brandLogoUrl(video.make) ? (
-                                <img
-                                  src={brandLogoUrl(video.make)!}
-                                  alt={video.make}
-                                  className="w-full h-full object-contain p-1"
-                                  onError={(e) => {
-                                    const el = e.target as HTMLImageElement;
-                                    el.onerror = null;
-                                    el.style.display = 'none';
-                                    el.parentElement!.innerHTML = `<span class="text-xs font-bold text-gray-400 uppercase">${video.make?.slice(0, 3) ?? ''}</span>`;
                                   }}
                                 />
                               ) : (
@@ -977,18 +959,6 @@ function MyVideosContent() {
             {/* Header */}
             <div className="px-5 py-4 flex items-center justify-between border-b border-gray-100">
               <div className="flex items-center gap-3">
-                {(() => {
-                  const make = selectedVideo.make || (selectedVideo.title || selectedVideo.originalName || '').split(' ')[0];
-                  const logoUrl = `https://raw.githubusercontent.com/filippofilip95/car-logos-dataset/master/logos/optimized/${make.toLowerCase().replace(/\s+/g, '-')}.png`;
-                  return (
-                    <img
-                      src={logoUrl}
-                      alt={make}
-                      className="w-10 h-10 object-contain flex-shrink-0"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                    />
-                  );
-                })()}
                 <div>
                   <h3 className="font-bold text-gray-900 text-base line-clamp-1">
                     {selectedVideo.title || selectedVideo.originalName || 'Video Preview'}

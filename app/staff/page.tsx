@@ -63,17 +63,9 @@ function videoThumb(video: Video) {
                 : null);
 }
 
-function brandLogo(video: Video) {
-    if (!video.make) return null;
-    const slug = video.make.toLowerCase().trim().replace(/\s+/g, '-');
-    return `https://raw.githubusercontent.com/filippofilip95/car-logos-dataset/master/logos/optimized/${slug}.png`;
-}
-
 function Thumb({ video }: { video: Video }) {
     const [failed, setFailed] = useState(false);
-    const [logoFailed, setLogoFailed] = useState(false);
     const src = videoThumb(video);
-    const logo = brandLogo(video);
     if (src && !failed) {
         return (
             <img
@@ -82,13 +74,6 @@ function Thumb({ video }: { video: Video }) {
                 className="h-9 w-14 shrink-0 rounded object-cover"
                 onError={() => setFailed(true)}
             />
-        );
-    }
-    if (logo && !logoFailed) {
-        return (
-            <span className="flex h-9 w-14 shrink-0 items-center justify-center rounded border border-[#E2E8F0] bg-white">
-                <img src={logo} alt="" className="h-6 w-6 object-contain" onError={() => setLogoFailed(true)} />
-            </span>
         );
     }
     return (

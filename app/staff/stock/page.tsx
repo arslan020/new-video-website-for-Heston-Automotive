@@ -446,9 +446,6 @@ function StockContent() {
 
   // Derived values for Direct Upload modal
   const directVd = selectedStockItem ? getVehicleData(selectedStockItem) : null;
-  const directBrandLogo = directVd
-    ? `https://raw.githubusercontent.com/filippofilip95/car-logos-dataset/master/logos/optimized/${directVd.make.toLowerCase().replace(/\s+/g, '-')}.png`
-    : '';
 
   // Filter & Pagination
   const filteredStock = stock.filter(item => {
@@ -657,8 +654,6 @@ function StockContent() {
             {/* Header — light */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <div className="flex items-center gap-3">
-                <img src={directBrandLogo} alt={directVd!.make} className="w-10 h-10 object-contain"
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                 <div>
                   <h3 className="font-bold text-gray-800 text-base leading-tight">Upload Video</h3>
                   <p className="text-xs text-gray-400">{directVd!.make} {directVd!.model}</p>
@@ -685,8 +680,9 @@ function StockContent() {
                 <div className="p-8 space-y-5">
                   {/* Vehicle card */}
                   <div className="rounded-xl border border-gray-100 bg-gray-50 p-5 flex items-center gap-5">
-                    <img src={directBrandLogo} alt={directVd!.make} className="w-28 h-28 object-contain flex-shrink-0"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display='none'; }} />
+                    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white text-[#0B3D73]">
+                      <FaCar size={22} />
+                    </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 flex-wrap">
                         <span className="font-bold text-gray-900 text-lg">{directVd!.make} {directVd!.model}</span>
