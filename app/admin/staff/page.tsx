@@ -214,7 +214,7 @@ function ManageStaffContent() {
 
   return (
     <DashboardLayout>
-      <div className="w-full px-3 sm:px-6 pb-12">
+      <div className="w-full pb-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-5 sm:mb-8">
           <PageTitle title="Staff">Manage your staff members and their account permissions.</PageTitle>
           <div className="flex gap-3">

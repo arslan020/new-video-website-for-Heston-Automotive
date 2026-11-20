@@ -98,7 +98,7 @@ function ActivityLogsContent() {
 
   return (
     <DashboardLayout>
-      <div className="w-full px-3 sm:px-6 pb-12">
+      <div className="w-full pb-8">
         <header className="mb-5 sm:mb-8">
           <PageTitle title="Activity Logs">Track staff actions across the portal.</PageTitle>
         </header>

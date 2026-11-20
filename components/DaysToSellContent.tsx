@@ -4,6 +4,7 @@ import { Fragment, useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/components/ToastProvider';
 import { PageTitle } from '@/components/ui/PageTitle';
+import MotorDeskStockContent from '@/components/MotorDeskStockContent';
 
 type Vehicle = {
   id: string;
@@ -80,7 +81,7 @@ const emptyForm: VehicleForm = {
   outstandingAmount: '',
 };
 
-export default function DaysToSellContent() {
+export default function DaysToSellContent({ view = 'active' }: { view?: 'active' | 'sold' }) {
   const { user } = useAuth();
   const { showToast } = useToast();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -299,6 +300,9 @@ export default function DaysToSellContent() {
     }
   };
 
+  const isSoldRow = (vehicle: Vehicle) => Boolean(vehicle.soldAt) && vehicle.vehicleType !== 'Demo';
+  const rows = vehicles.filter((vehicle) => (view === 'sold' ? isSoldRow(vehicle) : !isSoldRow(vehicle)));
+
   const cards = [
     { label: 'Still to sell', value: String(summary?.active ?? 0), tone: 'text-gray-900' },
     { label: 'Total outstanding', value: formatMoney(summary?.outstanding ?? 0), tone: 'text-gray-900' },
@@ -310,14 +314,17 @@ export default function DaysToSellContent() {
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <PageTitle title="Days to Sell">
-          Days are counted from the financing date. Interest stays at £0 for the first 90 days, then runs at 7.9% a year on the balance.
+        <PageTitle title={view === 'sold' ? 'Sold' : 'Days to Sell'}>
+          {view === 'sold'
+            ? 'Cars marked sold. Undo sold moves a car back to Days to Sell.'
+            : 'Days are counted from the financing date. Interest stays at £0 for the first 90 days, then runs at 7.9% a year on the balance.'}
         </PageTitle>
-        <div className="flex gap-2">
+        {view === 'sold' ? null : (
+        <div className="flex w-full gap-2 sm:w-auto">
           <button
             type="button"
             onClick={() => setShowForm((open) => !open)}
-            className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-50"
+            className="h-11 flex-1 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-800 hover:bg-gray-50 sm:flex-none"
           >
             Add vehicle
           </button>
@@ -325,11 +332,12 @@ export default function DaysToSellContent() {
             type="button"
             onClick={sendTest}
             disabled={sendingTest}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            className="h-11 flex-1 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 sm:flex-none"
           >
             {sendingTest ? 'Sending...' : 'Send email'}
           </button>
         </div>
+        )}
       </div>
 
       {showForm ? (
@@ -413,20 +421,89 @@ export default function DaysToSellContent() {
         </form>
       ) : null}
 
+      {view === 'sold' ? null : (
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-5">
         {cards.map((card) => (
           <div key={card.label} className="rounded-xl bg-white p-4 shadow-sm">
             <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{card.label}</p>
-            <p className={`mt-2 text-2xl font-semibold ${card.tone}`}>{card.value}</p>
+            <p className={`mt-2 text-lg font-semibold leading-tight sm:text-2xl ${card.tone}`}>{card.value}</p>
           </div>
         ))}
       </div>
+      )}
 
       <div className="overflow-hidden rounded-xl bg-white shadow-sm">
         {loading ? (
           <p className="p-6 text-sm text-gray-500">Loading vehicles...</p>
+        ) : rows.length === 0 ? (
+          <p className="p-6 text-sm text-gray-500">{view === 'sold' ? 'No sold vehicles' : 'No vehicles still to sell'}</p>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          <div className="space-y-3 p-3 lg:hidden">
+            {rows.map((vehicle) => {
+              const sold = Boolean(vehicle.soldAt) && vehicle.vehicleType !== 'Demo';
+              return (
+                <article key={vehicle.id} className={`rounded-xl border p-3 ${sold ? 'border-sky-200 bg-sky-50' : 'border-gray-100 bg-white'}`}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="break-all font-semibold text-gray-900">{vehicle.vin}</p>
+                      <p className="text-xs text-gray-500">{vehicle.invoiceNumber}{sold ? ' · Sold' : ''}</p>
+                    </div>
+                    <select
+                      value={vehicle.vehicleType === 'Demo' ? 'Demo' : 'Stock'}
+                      onChange={(event) => updateType(vehicle, event.target.value as 'Stock' | 'Demo')}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold text-white ${vehicle.vehicleType === 'Demo' ? 'bg-red-600' : 'bg-green-600'}`}
+                    >
+                      <option value="Stock">Stock</option>
+                      <option value="Demo">Demo</option>
+                    </select>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                    <p><span className="block text-[11px] uppercase text-gray-400">Day</span><span className="font-semibold">{vehicle.dayNumber}</span> · {vehicle.status}</p>
+                    <p><span className="block text-[11px] uppercase text-gray-400">Balance</span>{formatMoney(vehicle.outstandingAmount)}</p>
+                    <p><span className="block text-[11px] uppercase text-gray-400">90 days</span><span className={dayClass(vehicle.daysTo90)}>{dayText(vehicle.daysTo90)}</span></p>
+                    <p><span className="block text-[11px] uppercase text-gray-400">360 days</span><span className={dayClass(vehicle.daysTo360)}>{dayText(vehicle.daysTo360)}</span></p>
+                    <p><span className="block text-[11px] uppercase text-gray-400">Interest</span>{formatMoney(vehicle.interestToDate)}</p>
+                    <p><span className="block text-[11px] uppercase text-gray-400">Closing</span>{formatMoney(vehicle.closingBalance)}</p>
+                  </div>
+                  {vehicle.vehicleType === 'Demo' ? null : (
+                    <form className="mt-3 flex items-center gap-2" onSubmit={(event) => { event.preventDefault(); saveSoldPrice(vehicle); }}>
+                      <label className="flex min-w-0 flex-1 items-center rounded-lg border border-gray-200 bg-white">
+                        <span className="pl-2 text-sm font-medium text-gray-500">£</span>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={soldPriceDraft[vehicle.id] ?? (vehicle.soldPrice == null ? '' : vehicle.soldPrice.toFixed(2))}
+                          onChange={(event) => setSoldPriceDraft((current) => ({ ...current, [vehicle.id]: event.target.value }))}
+                          placeholder="0.00"
+                          aria-label="Sold at in pounds"
+                          className="w-full rounded-lg bg-white px-2 py-2 text-base text-gray-900 outline-none"
+                        />
+                      </label>
+                      <button type="submit" disabled={savingId === vehicle.id} className="h-11 rounded-lg bg-[#0B3D73] px-3 text-sm font-medium text-white disabled:opacity-50">Save</button>
+                    </form>
+                  )}
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <button type="button" disabled={savingId === vehicle.id} onClick={() => (editingId === vehicle.id ? setEditingId(null) : startEdit(vehicle))} className="h-11 rounded-lg border border-gray-200 text-sm font-medium">{editingId === vehicle.id ? 'Close' : 'Edit'}</button>
+                    {vehicle.vehicleType === 'Demo' ? <span /> : (
+                      <button type="button" disabled={savingId === vehicle.id} onClick={() => markSold(vehicle, !vehicle.soldAt)} className="h-11 rounded-lg border border-gray-200 text-sm font-medium">{sold ? 'Undo sold' : 'Mark sold'}</button>
+                    )}
+                  </div>
+                  {editingId === vehicle.id ? (
+                    <form className="mt-3 grid gap-3" onSubmit={(event) => { event.preventDefault(); saveEdit(); }}>
+                      <label className="text-sm text-gray-600">Invoice number<input required value={editForm.invoiceNumber} onChange={(event) => setEditForm({ ...editForm, invoiceNumber: event.target.value })} className="mt-1 h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-base" /></label>
+                      <label className="text-sm text-gray-600">VIN<input required value={editForm.vin} onChange={(event) => setEditForm({ ...editForm, vin: event.target.value.toUpperCase() })} className="mt-1 h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-base" /></label>
+                      <label className="text-sm text-gray-600">Invoice date<input required type="date" value={editForm.invoiceDate} onChange={(event) => setEditForm({ ...editForm, invoiceDate: event.target.value })} className="mt-1 h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-base" /></label>
+                      <label className="text-sm text-gray-600">Financing date<input required type="date" value={editForm.financingDate} onChange={(event) => setEditForm({ ...editForm, financingDate: event.target.value })} className="mt-1 h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-base" /></label>
+                      <label className="text-sm text-gray-600">Outstanding amount<input required type="number" min="0" step="0.01" value={editForm.outstandingAmount} onChange={(event) => setEditForm({ ...editForm, outstandingAmount: event.target.value })} className="mt-1 h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-base" /></label>
+                      <button type="submit" disabled={savingId === vehicle.id} className="h-11 rounded-lg bg-blue-600 text-sm font-medium text-white disabled:opacity-50">{savingId === vehicle.id ? 'Saving...' : 'Save changes'}</button>
+                    </form>
+                  ) : null}
+                </article>
+              );
+            })}
+          </div>
+          <div className="hidden overflow-x-auto lg:block">
             <table className="min-w-full text-left text-sm">
               <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
                 <tr>
@@ -444,7 +521,7 @@ export default function DaysToSellContent() {
                 </tr>
               </thead>
               <tbody>
-                {vehicles.map((vehicle) => {
+                {rows.map((vehicle) => {
                   const sold = Boolean(vehicle.soldAt) && vehicle.vehicleType !== 'Demo';
                   return (
                   <Fragment key={vehicle.id}>
@@ -630,8 +707,15 @@ export default function DaysToSellContent() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
+      {view === 'sold' ? (
+        <div className="mt-8">
+          <h2 className="mb-3 text-lg font-semibold text-gray-900">Motor Desk</h2>
+          <MotorDeskStockContent mode="sold" embedded />
+        </div>
+      ) : null}
     </div>
   );
 }

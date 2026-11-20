@@ -347,9 +347,9 @@ function AdminStockContent() {
   };
 
   return (
-    <div className="w-full px-3 sm:px-6 pb-12">
+    <div className="w-full pb-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-5 sm:mb-8">
-        <PageTitle title="Stock Status">
+        <PageTitle title="Live on Autotrader">
           <p>Manage your vehicle inventory and video status.</p>
           {lastSync ? <p className="mt-1">Last sync: {new Date(lastSync).toLocaleString()}</p> : null}
         </PageTitle>

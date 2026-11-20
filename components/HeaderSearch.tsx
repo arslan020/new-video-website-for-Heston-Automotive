@@ -196,7 +196,7 @@ export default function HeaderSearch() {
   let cursor = -1;
 
   return (
-    <div ref={boxRef} className="relative hidden min-w-0 flex-1 sm:block">
+    <div ref={boxRef} className="relative min-w-0 flex-1">
       <FaSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B]" size={14} />
       <input
         type="search"
@@ -204,7 +204,7 @@ export default function HeaderSearch() {
         placeholder="Search by reg, make or customer"
         aria-label="Search by reg, make or customer"
         aria-expanded={open}
-        className="h-10 w-full rounded-lg border border-[#E2E8F0] bg-white pl-9 pr-3 text-sm text-[#0F172A] placeholder:text-[#64748B] focus:border-[#0B3D73] focus:outline-none"
+        className="h-10 w-full rounded-lg border border-[#E2E8F0] bg-white pl-9 pr-3 text-base text-[#0F172A] placeholder:text-[#64748B] focus:border-[#0B3D73] focus:outline-none sm:text-sm"
         onChange={(event) => {
           setValue(event.target.value);
           setOpen(true);

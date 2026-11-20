@@ -24,7 +24,7 @@ function StaffViewsGate() {
 
   if (user?.canViewCustomerViews === false) {
     return (
-      <div className="w-full px-6 py-20 flex flex-col items-center text-center">
+      <div className="flex w-full flex-col items-center px-3 py-16 text-center">
         <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mb-4">
           <FaBan className="text-red-400" size={24} />
         </div>

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useAuth } from '@/context/AuthContext';
 import { FaLink, FaCar, FaEye, FaTimes, FaUser, FaBullhorn } from 'react-icons/fa';
+import { brandLogoUrl } from '@/lib/brandLogo';
 import NeedsAttention from '@/components/NeedsAttention';
 import { Card } from '@/components/ui/Card';
 import { StatCard } from '@/components/ui/StatCard';
@@ -65,7 +66,9 @@ function videoThumb(video: Video) {
 
 function Thumb({ video }: { video: Video }) {
     const [failed, setFailed] = useState(false);
+    const [logoFailed, setLogoFailed] = useState(false);
     const src = videoThumb(video);
+    const logo = brandLogoUrl(video.make);
     if (src && !failed) {
         return (
             <img
@@ -74,6 +77,13 @@ function Thumb({ video }: { video: Video }) {
                 className="h-9 w-14 shrink-0 rounded object-cover"
                 onError={() => setFailed(true)}
             />
+        );
+    }
+    if (logo && !logoFailed) {
+        return (
+            <span className="flex h-9 w-14 shrink-0 items-center justify-center rounded border border-[#E2E8F0] bg-white">
+                <img src={logo} alt="" className="h-6 w-6 object-contain" onError={() => setLogoFailed(true)} />
+            </span>
         );
     }
     return (
@@ -302,13 +312,13 @@ const StaffDashboard = () => {
         <DashboardLayout>
             <div className="w-full pb-8">
 
-                <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
+                <header className="mb-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                     <PageTitle title={`${getGreeting()}, ${firstName}`}>{getTodayDate()}</PageTitle>
-                    <div className="flex items-center gap-2">
+                    <div className="flex w-full gap-2 sm:w-auto">
                         <button
                             type="button"
                             onClick={() => setOffersOpen(true)}
-                            className="relative inline-flex h-11 items-center gap-2 rounded-xl bg-[#F5B400] px-5 text-sm font-semibold text-[#0B3D73] shadow-[0_10px_24px_-10px_rgba(245,180,0,0.95)] ring-2 ring-[#F5B400]/50 hover:bg-[#FFC72C]"
+                            className="relative inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-[#F5B400] px-4 text-sm font-semibold text-[#0B3D73] shadow-[0_10px_24px_-10px_rgba(245,180,0,0.95)] ring-2 ring-[#F5B400]/50 hover:bg-[#FFC72C] sm:flex-none sm:px-5"
                         >
                             <span className="absolute -right-1 -top-1 flex h-3 w-3">
                                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#0B3D73] opacity-60" />
@@ -320,14 +330,14 @@ const StaffDashboard = () => {
                         <button
                             type="button"
                             onClick={() => setUploadOpen(true)}
-                            className="h-10 rounded-lg bg-[#0B3D73] px-4 text-sm font-medium text-white hover:bg-[#072A50]"
+                            className="h-11 flex-1 rounded-lg bg-[#0B3D73] px-4 text-sm font-medium text-white hover:bg-[#072A50] sm:flex-none"
                         >
                             Upload video
                         </button>
                     </div>
                 </header>
 
-                <div className="mb-4 grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
+                <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
                     <StatCard
                         label="Cars in stock"
                         value={stock.length}

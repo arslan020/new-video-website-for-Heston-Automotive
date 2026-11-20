@@ -136,7 +136,7 @@ function SettingsContent() {
 
   return (
     <DashboardLayout>
-      <div className="w-full px-3 sm:px-6 pb-12">
+      <div className="w-full pb-8">
         {/* Header Section */}
         <div className="mb-5 sm:mb-8">
             <PageTitle title="Settings">Manage your account settings and preferences</PageTitle>

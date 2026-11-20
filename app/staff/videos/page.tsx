@@ -14,6 +14,7 @@ import {
 import UKPhoneInput from '@/components/UKPhoneInput';
 import MotorDeskCustomerSearch from '@/components/MotorDeskCustomerSearch';
 import RegistrationUploadModal from '@/components/RegistrationUploadModal';
+import { brandLogoUrl } from '@/lib/brandLogo';
 import { startCloudflareUpload } from '@/lib/cloudflareUploadClient';
 
 interface SubPart {
@@ -540,7 +541,7 @@ function MyVideosContent() {
   };
 
   return (
-    <div className="w-full px-3 sm:px-6">
+    <div className="w-full">
       <header className="mb-4 sm:mb-6 md:mb-8">
         <div className="flex items-start sm:items-center justify-between gap-3">
           <PageTitle title="My Uploaded Videos">Manage and share your car videos.</PageTitle>
@@ -670,7 +671,7 @@ function MyVideosContent() {
                           <div className="flex items-center gap-2 sm:gap-3">
                             <button
                               type="button"
-                              className="w-16 h-11 sm:w-20 sm:h-14 rounded-xl overflow-hidden flex-shrink-0 border border-gray-200 cursor-pointer group/thumb relative flex items-center justify-center bg-gray-900 shadow-sm"
+                              className={`w-16 h-11 sm:w-20 sm:h-14 rounded-xl overflow-hidden flex-shrink-0 border border-gray-200 cursor-pointer group/thumb relative flex items-center justify-center shadow-sm ${!thumbSrc(video) && brandLogoUrl(video.make) ? 'bg-white' : 'bg-gray-900'}`}
                               onClick={() => setSelectedVideo(video)}
                             >
                               {thumbSrc(video) ? (
@@ -682,6 +683,17 @@ function MyVideosContent() {
                                     (e.target as HTMLImageElement).onerror = null;
                                     (e.target as HTMLImageElement).src =
                                       'https://via.placeholder.com/160x90?text=Video';
+                                  }}
+                                />
+                              ) : brandLogoUrl(video.make) ? (
+                                <img
+                                  src={brandLogoUrl(video.make)}
+                                  alt={video.make}
+                                  className="w-full h-full object-contain p-1"
+                                  onError={(e) => {
+                                    const el = e.target as HTMLImageElement;
+                                    el.onerror = null;
+                                    el.style.display = 'none';
                                   }}
                                 />
                               ) : (
@@ -696,7 +708,7 @@ function MyVideosContent() {
                               )}
                             </button>
                             <div className="min-w-0">
-                              <h3 className="font-semibold text-gray-900 text-xs sm:text-sm truncate max-w-[130px] sm:max-w-[200px] md:max-w-[220px] leading-tight">{displayName}</h3>
+                              <h3 className="max-w-[46vw] truncate text-sm font-semibold leading-tight text-gray-900 sm:max-w-[220px]">{displayName}</h3>
                               <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                                 {video.registration && (
                                   <span className="px-1.5 sm:px-2 py-0.5 bg-blue-50 text-blue-600 font-mono text-xs rounded-md border border-blue-100">
@@ -959,6 +971,14 @@ function MyVideosContent() {
             {/* Header */}
             <div className="px-5 py-4 flex items-center justify-between border-b border-gray-100">
               <div className="flex items-center gap-3">
+                {brandLogoUrl(selectedVideo.make || (selectedVideo.title || selectedVideo.originalName || '').split(' ')[0]) ? (
+                  <img
+                    src={brandLogoUrl(selectedVideo.make || (selectedVideo.title || selectedVideo.originalName || '').split(' ')[0])}
+                    alt=""
+                    className="w-10 h-10 object-contain flex-shrink-0"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
+                ) : null}
                 <div>
                   <h3 className="font-bold text-gray-900 text-base line-clamp-1">
                     {selectedVideo.title || selectedVideo.originalName || 'Video Preview'}

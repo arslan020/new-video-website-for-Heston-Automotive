@@ -12,6 +12,7 @@ const PUBLIC_API_PATHS = [
   '/api/bookings',
   '/api/contact',
   '/api/vehicle-metadata',
+  '/api/brand-logo',
 ];
 
 function isPublicApiPath(pathname: string): boolean {

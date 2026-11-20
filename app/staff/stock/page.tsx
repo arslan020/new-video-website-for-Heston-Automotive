@@ -10,6 +10,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import { useToast } from '@/components/ToastProvider';
 import MotorDeskCustomerSearch from '@/components/MotorDeskCustomerSearch';
 import { startCloudflareUpload } from '@/lib/cloudflareUploadClient';
+import { brandLogoUrl } from '@/lib/brandLogo';
 import {
   FaCar, FaVideo, FaCopy, FaCheckCircle, FaCheck, FaPlus, FaCloudUploadAlt,
   FaTimes, FaSearch, FaGasPump, FaCog, FaPalette,
@@ -446,6 +447,7 @@ function StockContent() {
 
   // Derived values for Direct Upload modal
   const directVd = selectedStockItem ? getVehicleData(selectedStockItem) : null;
+  const directBrandLogo = brandLogoUrl(directVd?.make);
 
   // Filter & Pagination
   const filteredStock = stock.filter(item => {
@@ -463,9 +465,9 @@ function StockContent() {
   const endEntry = Math.min(currentPage * ITEMS_PER_PAGE, filteredStock.length);
 
   return (
-    <div className="w-full px-6 pb-12">
+    <div className="w-full pb-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <PageTitle title="All Vehicles">
+          <PageTitle title="Live on Autotrader">
               <p>Manage inventory and upload videos.</p>
               {lastSyncTime && (
                 <p className="mt-1">
@@ -473,17 +475,17 @@ function StockContent() {
                 </p>
               )}
           </PageTitle>
-          <div className="flex items-center gap-2">
+          <div className="flex w-full gap-2 sm:w-auto">
               <button
                 type="button"
                 onClick={handleManualSync}
                 disabled={syncing}
-                className="inline-flex h-10 items-center gap-2 rounded-lg border border-[#E2E8F0] bg-white px-4 text-sm font-medium text-[#0F172A] transition hover:border-[#0B3D73] disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-lg border border-[#E2E8F0] bg-white px-4 text-sm font-medium text-[#0F172A] transition hover:border-[#0B3D73] disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
               >
                   <FaSync className={syncing ? 'animate-spin' : ''} size={12} />
                   {syncing ? 'Syncing...' : 'Sync now'}
               </button>
-              <button type="button" onClick={() => { setSmartUploadOpen(true); resetUploadState(); }} className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#0B3D73] px-4 text-sm font-medium text-white transition hover:bg-[#072A50]">
+              <button type="button" onClick={() => { setSmartUploadOpen(true); resetUploadState(); }} className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-[#0B3D73] px-4 text-sm font-medium text-white transition hover:bg-[#072A50] sm:flex-none">
                   <FaVideo size={13} /> Upload video
               </button>
           </div>
@@ -491,7 +493,7 @@ function StockContent() {
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
           <div className="p-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex bg-gray-100 p-1 rounded-lg self-start sm:self-auto">
+              <div className="flex w-full overflow-x-auto bg-gray-100 p-1 rounded-lg sm:w-auto sm:self-auto">
                   {['All', 'With Video', 'No Video'].map(s => (
                       <button key={s} onClick={() => { setFilterStatus(s); setCurrentPage(1); }} className={`px-4 py-1.5 rounded-md text-sm font-medium transition ${filterStatus === s ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>{s}</button>
                   ))}
@@ -505,7 +507,40 @@ function StockContent() {
           {loadingStock ? (
               <div className="flex justify-center py-12"><div className="spinner" /></div>
           ) : (
-             <div className="overflow-x-auto lg:overflow-visible">
+            <>
+            <div className="space-y-3 p-3 md:hidden">
+              {paginatedStock.map((item, index) => {
+                const v = getVehicleData(item);
+                const matchingVideos = getMatchingVideos(item);
+                const hasVid = matchingVideos.length > 0;
+                return (
+                  <article key={item._id || item.id || index} className={`rounded-xl border p-3 ${hasVid ? 'border-emerald-200 bg-emerald-50' : 'border-gray-200 bg-white'}`}>
+                    <div className="flex items-center gap-3">
+                      <div className="h-14 w-20 shrink-0 overflow-hidden rounded-lg bg-gray-100">
+                        {v.image ? <img src={v.image} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-gray-300"><FaCar size={18} /></div>}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-gray-900">{v.make} {v.model}</p>
+                        <p className="mt-1 inline-block rounded border border-blue-100 bg-blue-50 px-2 py-0.5 font-mono text-xs text-blue-600">{v.registration || 'NO REG'}</p>
+                      </div>
+                    </div>
+                    {v.derivative ? <p className="mt-2 line-clamp-2 text-xs text-gray-500">{v.derivative}</p> : null}
+                    <div className="mt-3">
+                      {hasVid ? (
+                        <div className="grid grid-cols-2 gap-2">
+                          <button type="button" onClick={() => window.open(`/view/${matchingVideos[0]._id}`, '_blank')} className="h-11 rounded-lg border border-gray-200 bg-white text-sm font-medium">View</button>
+                          <button type="button" onClick={() => { setSelectedVideo(matchingVideos[0]); setSendForm({ title: 'Mr', name: '', email: '', mobile: '' }); setSendModalOpen(true); }} className="h-11 rounded-lg bg-[#0B3D73] text-sm font-medium text-white">Send</button>
+                        </div>
+                      ) : (
+                        <button type="button" onClick={() => { setSelectedStockItem(item); setDirectUploadOpen(true); }} className="h-11 w-full rounded-lg bg-blue-600 text-sm font-semibold text-white">Upload</button>
+                      )}
+                    </div>
+                  </article>
+                );
+              })}
+              {paginatedStock.length === 0 ? <p className="py-8 text-center text-sm text-gray-500">No vehicles found.</p> : null}
+            </div>
+             <div className="hidden overflow-x-auto md:block lg:overflow-visible">
                  <table className="w-full text-left border-collapse min-w-[700px]">
                      <thead>
                          <tr className="bg-gray-50 border-b border-gray-200">
@@ -597,22 +632,24 @@ function StockContent() {
                      </tbody>
                  </table>
              </div>
+            </>
           )}
-          <div className="p-4 border-t border-gray-100 flex items-center justify-between text-sm text-gray-500">
+          <div className="flex flex-col gap-3 border-t border-gray-100 p-4 text-sm text-gray-500 sm:flex-row sm:items-center sm:justify-between">
             <p>
               Showing{' '}
               <span className="font-medium text-gray-800">{startEntry}-{endEntry}</span> of{' '}
               <span className="font-medium text-gray-800">{filteredStock.length}</span> entries
             </p>
-            <div className="flex gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
               <button
                 type="button"
                 onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
                 disabled={currentPage === 1}
-                className="px-3 py-1 border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="h-11 rounded-lg border border-gray-200 px-3 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 sm:h-9"
               >
                 Previous
               </button>
+              <div className="hidden gap-2 sm:flex">
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                 <button
                   key={page}
@@ -627,11 +664,12 @@ function StockContent() {
                   {page}
                 </button>
               ))}
+              </div>
               <button
                 type="button"
                 onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
                 disabled={currentPage === totalPages || totalPages === 0}
-                className="px-3 py-1 border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="h-11 rounded-lg border border-gray-200 px-3 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 sm:h-9"
               >
                 Next
               </button>
@@ -654,6 +692,10 @@ function StockContent() {
             {/* Header — light */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <div className="flex items-center gap-3">
+                {directBrandLogo ? (
+                  <img src={directBrandLogo} alt={directVd!.make} className="w-10 h-10 object-contain"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                ) : null}
                 <div>
                   <h3 className="font-bold text-gray-800 text-base leading-tight">Upload Video</h3>
                   <p className="text-xs text-gray-400">{directVd!.make} {directVd!.model}</p>
@@ -680,9 +722,14 @@ function StockContent() {
                 <div className="p-8 space-y-5">
                   {/* Vehicle card */}
                   <div className="rounded-xl border border-gray-100 bg-gray-50 p-5 flex items-center gap-5">
-                    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white text-[#0B3D73]">
-                      <FaCar size={22} />
-                    </div>
+                    {directBrandLogo ? (
+                      <img src={directBrandLogo} alt={directVd!.make} className="w-28 h-28 object-contain flex-shrink-0"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display='none'; }} />
+                    ) : (
+                      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white text-[#0B3D73]">
+                        <FaCar size={22} />
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 flex-wrap">
                         <span className="font-bold text-gray-900 text-lg">{directVd!.make} {directVd!.model}</span>

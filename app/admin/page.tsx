@@ -139,7 +139,7 @@ const AdminDashboard = () => {
 
     return (
         <DashboardLayout>
-            <div className="w-full px-3 sm:px-6 space-y-5 sm:space-y-8 animate-fadeIn">
+            <div className="w-full space-y-5 sm:space-y-8 animate-fadeIn">
 
                 <NeedsAttention stockHref="/admin/stock" videosHref="/staff/videos" daysHref="/admin/days-to-sell" />
 

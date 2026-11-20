@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { FaHome, FaVideo, FaCar, FaCog, FaUsersCog, FaHistory, FaEye, FaShippingFast, FaHourglassHalf } from 'react-icons/fa';
+import { FaHome, FaVideo, FaCar, FaCog, FaUsersCog, FaHistory, FaEye, FaShippingFast, FaHourglassHalf, FaCheckCircle, FaWarehouse, FaInbox, FaComment } from 'react-icons/fa';
 
 interface SidebarProps {
   role: 'admin' | 'staff';
@@ -18,9 +18,13 @@ type MenuItem = {
 
 const adminMenu: MenuItem[] = [
   { icon: FaHome, label: 'Dashboard', path: '/admin' },
-  { icon: FaCar, label: 'Browse Vehicles', path: '/admin/stock' },
+  { icon: FaCar, label: 'Live on Autotrader', path: '/admin/stock' },
+  { icon: FaWarehouse, label: 'Motor Desk stock', path: '/admin/motordesk-stock' },
+  { icon: FaInbox, label: 'Leads', path: '/admin/leads' },
+  { icon: FaComment, label: 'Custom SMS', path: '/admin/sms' },
   { icon: FaShippingFast, label: 'Changan Tracker', path: '/admin/changan' },
   { icon: FaHourglassHalf, label: 'Days to Sell', path: '/admin/days-to-sell' },
+  { icon: FaCheckCircle, label: 'Sold', path: '/admin/sold' },
   { icon: FaVideo, label: 'Uploaded Videos', path: '/staff/videos' },
   { icon: FaUsersCog, label: 'Manage Staff', path: '/admin/staff' },
   { icon: FaHistory, label: 'Activity Logs', path: '/admin/activity-logs' },
@@ -30,9 +34,13 @@ const adminMenu: MenuItem[] = [
 
 const staffMenu: MenuItem[] = [
   { icon: FaHome, label: 'Dashboard', path: '/staff' },
-  { icon: FaCar, label: 'Browse Vehicles', path: '/staff/stock' },
+  { icon: FaCar, label: 'Live on Autotrader', path: '/staff/stock' },
+  { icon: FaWarehouse, label: 'Motor Desk stock', path: '/staff/motordesk-stock' },
+  { icon: FaInbox, label: 'Leads', path: '/staff/leads' },
+  { icon: FaComment, label: 'Custom SMS', path: '/staff/sms' },
   { icon: FaShippingFast, label: 'Changan Tracker', path: '/staff/changan' },
   { icon: FaHourglassHalf, label: 'Days to Sell', path: '/staff/days-to-sell' },
+  { icon: FaCheckCircle, label: 'Sold', path: '/staff/sold' },
   { icon: FaVideo, label: 'My Videos', path: '/staff/videos' },
   { icon: FaEye, label: 'Customer Views', path: '/staff/views' },
   { icon: FaCog, label: 'Settings', path: '/staff/settings' },
@@ -40,15 +48,15 @@ const staffMenu: MenuItem[] = [
 
 const staffGroups = [
   { label: '', paths: ['/staff'] },
-  { label: 'Videos', paths: ['/staff/stock', '/staff/videos', '/staff/views'] },
-  { label: 'Changan', paths: ['/staff/changan', '/staff/days-to-sell'] },
+  { label: 'Videos', paths: ['/staff/stock', '/staff/motordesk-stock', '/staff/leads', '/staff/sms', '/staff/videos', '/staff/views'] },
+  { label: 'Changan', paths: ['/staff/changan', '/staff/days-to-sell', '/staff/sold'] },
   { label: 'Account', paths: ['/staff/settings'] },
 ];
 
 const adminGroups = [
   { label: '', paths: ['/admin'] },
-  { label: 'Videos', paths: ['/admin/stock', '/staff/videos', '/admin/views'] },
-  { label: 'Changan', paths: ['/admin/changan', '/admin/days-to-sell'] },
+  { label: 'Videos', paths: ['/admin/stock', '/admin/motordesk-stock', '/admin/leads', '/admin/sms', '/staff/videos', '/admin/views'] },
+  { label: 'Changan', paths: ['/admin/changan', '/admin/days-to-sell', '/admin/sold'] },
   { label: 'Admin', paths: ['/admin/staff', '/admin/activity-logs'] },
   { label: 'Account', paths: ['/admin/settings'] },
 ];

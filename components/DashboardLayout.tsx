@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import Sidebar from './Sidebar';
 import { FaSignOutAlt, FaChevronDown, FaBars, FaBell } from 'react-icons/fa';
@@ -10,8 +10,14 @@ import HeaderSearch from './HeaderSearch';
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  useEffect(() => {
+    setIsSidebarOpen(false);
+    setIsDropdownOpen(false);
+  }, [pathname]);
 
   const handleLogout = () => {
     logout();
@@ -46,32 +52,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Main Content Area */}
       <div className="flex w-full min-w-0 flex-1 flex-col overflow-x-hidden min-h-screen transition-all duration-300 md:ml-72">
         {/* Header */}
-        <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-4 border-b border-[#E2E8F0] bg-white px-6">
-          <div className="flex min-w-0 flex-1 items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              aria-label="Open menu"
-              className="flex h-10 w-10 items-center justify-center rounded-lg text-[#475569] hover:bg-[#F5F6F8] md:hidden"
-            >
-              <FaBars size={18} />
-            </button>
-            <HeaderSearch />
-          </div>
+        <header className="sticky top-0 z-40 border-b border-[#E2E8F0] bg-white">
+          <div className="flex h-14 items-center gap-2 px-3 sm:h-16 sm:gap-3 sm:px-6">
+          <button
+            type="button"
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            aria-label="Open menu"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-[#475569] hover:bg-[#F5F6F8] md:hidden"
+          >
+            <FaBars size={18} />
+          </button>
+          <HeaderSearch />
 
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
             <button
               type="button"
               aria-label="Notifications"
-              className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#E2E8F0] text-[#475569]"
+              className="hidden h-10 w-10 items-center justify-center rounded-lg border border-[#E2E8F0] text-[#475569] sm:flex"
             >
               <FaBell size={15} />
             </button>
-            <div
-              className="relative"
-              onMouseEnter={() => setIsDropdownOpen(true)}
-              onMouseLeave={() => setIsDropdownOpen(false)}
-            >
+            <div className="relative">
             <button
               type="button"
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -100,9 +101,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             )}
             </div>
           </div>
+          </div>
         </header>
 
-        <main className="flex-1 px-6 py-6">
+        <main className="flex-1 px-3 py-4 sm:px-6 sm:py-6">
           {children}
         </main>
       </div>

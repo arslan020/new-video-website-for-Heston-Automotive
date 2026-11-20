@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { brandLogoUrl } from '@/lib/brandLogo';
 
 export default function VideoViewPage() {
   const params = useParams();
@@ -218,6 +219,14 @@ export default function VideoViewPage() {
                           <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100">
                               <div className="flex items-center justify-between gap-3 sm:gap-4">
                                   <div className="flex items-center gap-3 sm:gap-4">
+                                      {brandLogoUrl(video.make) ? (
+                                          <img
+                                              src={brandLogoUrl(video.make)}
+                                              alt={video.make}
+                                              className="w-14 h-14 sm:w-20 sm:h-20 object-contain flex-shrink-0"
+                                              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                          />
+                                      ) : null}
                                       <h2 className="text-base sm:text-xl font-bold text-gray-900 leading-tight">
                                           {video.make && video.model ? `${video.make} ${video.model}` : video.title || video.originalName || 'Car Video'}
                                       </h2>

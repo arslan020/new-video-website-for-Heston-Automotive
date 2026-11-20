@@ -83,7 +83,7 @@ function StaffSettingsContent() {
 
     return (
         <DashboardLayout>
-            <div className="w-full pb-12 px-3 sm:px-6">
+            <div className="w-full pb-8">
                 {/* Page Header */}
                 <div className="mb-6 sm:mb-8">
                     <PageTitle title="Settings">Manage your account settings and preferences</PageTitle>
